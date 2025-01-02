@@ -4,22 +4,70 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebSocket Test</title>
+  <style>
+    #messageBox {
+      border: 1px solid #ccc;
+      padding: 10px;
+      width: 300px;
+      height: 100px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+    #chatInput {
+      margin-top: 10px;
+      width: 300px;
+    }
+  </style>
 </head>
 <body>
+  <div id="messageBox">Waiting for server message...</div>
+  
+  <!-- Input box for sending messages -->
+  <input type="text" id="chatInput" placeholder="Type a message..." />
+  <button id="sendMessageButton">Send</button>
+
   <script>
+    // Create WebSocket connection to the server
     const socket = new WebSocket('ws://localhost:3000');
 
+    // Handle connection open
     socket.onopen = () => {
       console.log('Connected to server');
-      socket.send('Hello, Server!');
     };
 
+    // Handle incoming messages from the server
     socket.onmessage = (event) => {
-      console.log('Message from server:', event.data);
+      const message = event.data;
+      console.log('Received message from server:', message);  // Log message in the console
+
+      // Ensure that the message is a string before updating the message box
+      if (typeof message === 'string') {
+        document.getElementById('messageBox').textContent = message; // Update the displayed message on this tab
+      } else {
+        console.error('Received non-string message:', message);
+        // If it's a Blob, convert it to text
+        if (message instanceof Blob) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            document.getElementById('messageBox').textContent = e.target.result;
+          };
+          reader.readAsText(message);  // Convert Blob to text and display
+        }
+      }
     };
 
+    // Handle connection close
     socket.onclose = () => {
       console.log('Disconnected from server');
+    };
+
+    // Send a message when the user clicks the send button
+    document.getElementById('sendMessageButton').onclick = () => {
+      const message = document.getElementById('chatInput').value;
+      if (message) {
+        socket.send(message);  // Send the message to the server
+        document.getElementById('chatInput').value = '';  // Clear input box
+      }
     };
   </script>
 </body>

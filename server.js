@@ -12,16 +12,21 @@ server.on('connection', (socket) => {
   console.log('A player connected');
 
   // Send a message to the player
-  socket.send('Welcome to the server!');
+  socket.send('Welcome to the Summoners Rift!');
 
   // Listen for messages from the client
   socket.on('message', (message) => {
     console.log('Received:', message);
 
-    // Broadcast the message to all other connected players
+    // Ensure the message is a string
+    if (message instanceof Buffer || message instanceof ArrayBuffer) {
+      message = message.toString(); // Convert to string if it's a binary format
+    }
+
+    // Broadcast the message to all connected clients
     server.clients.forEach((client) => {
       if (client !== socket && client.readyState === WebSocket.OPEN) {
-        client.send(message);
+        client.send(message); // Send the string message
       }
     });
   });

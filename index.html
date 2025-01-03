@@ -5,26 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebSocket Test</title>
   <style>
+    body {
+      margin: 0;
+      display: flex; /* 채팅창과 캔버스를 나란히 배치 */
+    }
+
+    #chatContainer {
+      width: 300px;
+      background-color: #f9f9f9;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      box-sizing: border-box;
+      height: 100vh; /* 화면 전체 높이 */
+    }
+
     #messageBox {
       border: 1px solid #ccc;
       padding: 10px;
-      width: 300px;
-      height: 100px;
-      margin-top: 20px;
-      margin-bottom: 20px;
+      height: 200px;
+      margin-bottom: 10px;
+      overflow-y: auto; /* 스크롤 가능 */
     }
+
     #chatInput {
-      margin-top: 10px;
-      width: 300px;
+      width: calc(100% - 80px);
+      margin-right: 10px;
+      box-sizing: border-box;
+    }
+
+    #sendMessageButton {
+      width: 60px;
+    }
+
+    #canvas {
+      flex: 1; /* 남은 공간을 차지 */
+      position: relative;
+      background: #f0f0f0;
+      overflow: hidden;
+    }
+
+    .draggable {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div id="messageBox">Waiting for server message...</div>
-  
-  <!-- Input box for sending messages -->
-  <input type="text" id="chatInput" placeholder="Type a message..." />
-  <button id="sendMessageButton">Send</button>
+  <!-- 채팅 영역 -->
+  <div id="chatContainer">
+    <div id="messageBox">Waiting for server message...</div>
+    <input type="text" id="chatInput" placeholder="Type a message..." />
+    <button id="sendMessageButton">Send</button>
+  </div>
+
+  <!-- 캔버스 영역 -->
+  <div id="canvas">
+    <img id="champion" class="draggable" src="assets/mundoface.png" alt="Champion" style="top: 200px; left: 300px;" />
+  </div>
 
   <script>
     // Create WebSocket connection to the server
@@ -38,21 +77,18 @@
     // Handle incoming messages from the server
     socket.onmessage = (event) => {
       const message = event.data;
-      console.log('Received message from server:', message);  // Log message in the console
+      console.log('Received message from server:', message);
 
-      // Ensure that the message is a string before updating the message box
-      if (typeof message === 'string') {
-        document.getElementById('messageBox').textContent = message; // Update the displayed message on this tab
-      } else {
-        console.error('Received non-string message:', message);
-        // If it's a Blob, convert it to text
-        if (message instanceof Blob) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            document.getElementById('messageBox').textContent = e.target.result;
-          };
-          reader.readAsText(message);  // Convert Blob to text and display
+      try {
+        const data = JSON.parse(message);
+        if (data.type === 'move' && data.position) {
+          // Update the position of the image
+          const image = document.getElementById('champion');
+          image.style.left = `${data.position.x}px`;
+          image.style.top = `${data.position.y}px`;
         }
+      } catch (error) {
+        console.error('Error parsing message:', error);
       }
     };
 
@@ -61,14 +97,60 @@
       console.log('Disconnected from server');
     };
 
-    // Send a message when the user clicks the send button
-    document.getElementById('sendMessageButton').onclick = () => {
-      const message = document.getElementById('chatInput').value;
-      if (message) {
-        socket.send(message);  // Send the message to the server
-        document.getElementById('chatInput').value = '';  // Clear input box
+    const image = document.getElementById('champion');
+    const canvas = document.getElementById('canvas');
+    const speed  = 5;
+
+    // 이미지 우클릭 위치로 움직이게 하기
+    function moveImageTo(targetX, targetY, notifyServer = true){
+      const startX = Image.offsetLeft;
+      const startY = Image.offsetTop;
+
+      const distanceX = targetX - startX;
+      const distanceY = targetY - startY;
+
+      const steps = Math.sqrt(distanceX ** 2 + distanceY ** 2) / speed;
+
+      let currentStep = 0;
+
+      function animate(){
+        if (currentStep < steps) {
+          currentStep++;
+          image.style.left = `${startX + (distanceX / steps) * currentStep}px`;
+          image.style.top = `${startY + (distanceY / steps) * currentStep}px`;
+          requestAnimationFrame(animate);
+        } else if (notifyServer) {
+          // Send the final position to the server
+          socket.send(JSON.stringify({ type: 'move', position: { x: targetX, y: targetY } }));
+        }
       }
-    };
+      animate();
+    }
+
+    // Prevent default right-click menu
+    canvas.addEventListener('contextmenu', (event) => {
+      event.preventDefault(); // Prevent the default context menu
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // Calculate the target position relative to the canvas
+      const targetX = Math.max(0, Math.min(event.clientX - canvasRect.left, canvasRect.width - image.offsetWidth));
+      const targetY = Math.max(0, Math.min(event.clientY - canvasRect.top, canvasRect.height - image.offsetHeight));
+
+      moveImageTo(targetX, targetY); // Start the animation
+    });
+
+    image.addEventListener('mousedown', (event) => {
+      if (event.button === 2) { // Right mouse button
+        isDragging = true;
+        offsetX = event.clientX - image.offsetLeft;
+        offsetY = event.clientY - image.offsetTop;
+      }
+    });
+
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
   </script>
 </body>
 </html>

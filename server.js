@@ -35,4 +35,17 @@ server.on('connection', (socket) => {
   socket.on('close', () => {
     console.log('A player disconnected');
   });
+
+  // Broadcast image position updates
+socket.on('message', (message) => {
+  const data = JSON.parse(message);
+  if (data.type === 'move') {
+    server.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message); // Broadcast new position
+      }
+    });
+  }
+});
+
 });

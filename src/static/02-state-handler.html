@@ -37,6 +37,22 @@
         height: 100%; /* HP 바 높이 */
         }
     </style>
+
+    <style>
+        .img {
+        animation: rotate_image 1s linear infinite; /* 6초 동안 회전, 무한 반복 */
+        transform-origin: 50% 50%; /* 중앙을 기준으로 회전 */
+        }
+    
+        @keyframes rotate_image {
+        from {
+            transform: rotate(0deg); /* 시작 각도 */
+        }
+        to {
+            transform: rotate(-360deg); /* 끝 각도 */
+        }
+        }
+    </style>
   
 
   </head>
@@ -86,6 +102,7 @@
 
                 // 식칼 DOM 추가
                 const knifeDom = document.createElement("img");
+                knifeDom.className = "img";
                 knifeDom.id = `knife-${sessionId}`;
                 knifeDom.src = "knife.png"; // 이미지 경로 설정
                 knifeDom.style.position = "absolute";
@@ -103,7 +120,7 @@
                     // HP 바 업데이트
                     const hpPercentage = Math.max(player.hp, 0) + "%";
                     hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
-                    
+
                     // 플레이어 Knife
                     if (player.knifeActive) {
                         knifeDom.style.left = `${player.knifeX}px`;

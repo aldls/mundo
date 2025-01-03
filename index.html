@@ -7,7 +7,7 @@
   <style>
     body {
       margin: 0;
-      display: flex; /* 채팅창과 캔버스를 나란히 배치 */
+      display: flex;
     }
 
     #chatContainer {
@@ -16,7 +16,7 @@
       border-right: 1px solid #ccc;
       padding: 10px;
       box-sizing: border-box;
-      height: 100vh; /* 화면 전체 높이 */
+      height: 100vh;
     }
 
     #messageBox {
@@ -24,7 +24,7 @@
       padding: 10px;
       height: 200px;
       margin-bottom: 10px;
-      overflow-y: auto; /* 스크롤 가능 */
+      overflow-y: auto;
     }
 
     #chatInput {
@@ -38,7 +38,7 @@
     }
 
     #canvas {
-      flex: 1; /* 남은 공간을 차지 */
+      flex: 1;
       position: relative;
       background: #f0f0f0;
       overflow: hidden;
@@ -53,14 +53,12 @@
   </style>
 </head>
 <body>
-  <!-- 채팅 영역 -->
   <div id="chatContainer">
     <div id="messageBox">Waiting for server message...</div>
     <input type="text" id="chatInput" placeholder="Type a message..." />
     <button id="sendMessageButton">Send</button>
   </div>
 
-  <!-- 캔버스 영역 -->
   <div id="canvas">
     <img id="champion" class="draggable" src="assets/mundoface.png" alt="Champion" style="top: 200px; left: 300px;" />
   </div>
@@ -69,42 +67,34 @@
     // Create WebSocket connection to the server
     const socket = new WebSocket('ws://localhost:3000');
 
-    // Handle connection open
     socket.onopen = () => {
       console.log('Connected to server');
     };
 
-    // Handle incoming messages from the server
     socket.onmessage = (event) => {
       const message = event.data;
-      console.log('Received message from server:', message);
-
       try {
         const data = JSON.parse(message);
         if (data.type === 'move' && data.position) {
-          // Update the position of the image
-          const image = document.getElementById('champion');
-          image.style.left = `${data.position.x}px`;
-          image.style.top = `${data.position.y}px`;
+          moveImageTo(data.position.x, data.position.y, false); // Update image position
         }
       } catch (error) {
         console.error('Error parsing message:', error);
       }
     };
 
-    // Handle connection close
     socket.onclose = () => {
       console.log('Disconnected from server');
     };
 
-    const image = document.getElementById('champion');
     const canvas = document.getElementById('canvas');
-    const speed  = 5;
+    const image = document.getElementById('champion');
+    const speed = 5; // Pixels per frame
 
-    // 이미지 우클릭 위치로 움직이게 하기
-    function moveImageTo(targetX, targetY, notifyServer = true){
-      const startX = Image.offsetLeft;
-      const startY = Image.offsetTop;
+    // Function to smoothly move the image to the target position
+    function moveImageTo(targetX, targetY, notifyServer = true) {
+      const startX = image.offsetLeft;
+      const startY = image.offsetTop;
 
       const distanceX = targetX - startX;
       const distanceY = targetY - startY;
@@ -113,7 +103,7 @@
 
       let currentStep = 0;
 
-      function animate(){
+      function animate() {
         if (currentStep < steps) {
           currentStep++;
           image.style.left = `${startX + (distanceX / steps) * currentStep}px`;
@@ -124,10 +114,11 @@
           socket.send(JSON.stringify({ type: 'move', position: { x: targetX, y: targetY } }));
         }
       }
+
       animate();
     }
 
-    // Prevent default right-click menu
+    // Event listener for right-click to move the image
     canvas.addEventListener('contextmenu', (event) => {
       event.preventDefault(); // Prevent the default context menu
       const canvasRect = canvas.getBoundingClientRect();
@@ -139,18 +130,14 @@
       moveImageTo(targetX, targetY); // Start the animation
     });
 
-    image.addEventListener('mousedown', (event) => {
-      if (event.button === 2) { // Right mouse button
-        isDragging = true;
-        offsetX = event.clientX - image.offsetLeft;
-        offsetY = event.clientY - image.offsetTop;
+    // Chat functionality
+    document.getElementById('sendMessageButton').onclick = () => {
+      const message = document.getElementById('chatInput').value;
+      if (message) {
+        socket.send(message);
+        document.getElementById('chatInput').value = '';
       }
-    });
-
-
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
+    };
   </script>
 </body>
 </html>

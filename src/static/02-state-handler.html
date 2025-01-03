@@ -24,32 +24,24 @@
 
   </head>
   <body>
-    <h1>
-      <a href="https://github.com/colyseus/colyseus-examples"><img src="https://cdn.jsdelivr.net/gh/colyseus/colyseus@master/media/header.png" height="100" alt="colyseus" /></a>
-    </h1>
-
-    <p>This example shows how to use custom data structures in your room's state.</p>
-
     <strong>commands</strong><br>
 
-    <button onclick="up()">up</button>
-    <button onclick="down()">down</button>
-    <br />
-    <button onclick="left()">left</button>
-    <button onclick="right()">right</button>
-
     <script>
+        // 서버와의 연결
         var host = window.document.location.host.replace(/:.*/, '');
 
         var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
         var room;
+
+        // 방 또는 생성
         client.joinOrCreate("state_handler").then(room_instance => {
             room = room_instance
 
+            // 플레이어 관리
             var players = {};
             var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
 
-            // listen to patches coming from the server
+            // 새로운 플레이어 추가
             room.state.players.onAdd(function (player, sessionId) {
                 var dom = document.createElement("div");
                 dom.className = "player";
@@ -67,16 +59,18 @@
                 document.body.appendChild(dom);
             });
 
+            // 플레이어 제거
             room.state.players.onRemove(function (player, sessionId) {
                 document.body.removeChild(players[sessionId]);
                 delete players[sessionId];
             });
 
-
+            // 서버 메시지 핸들링 (?)
             room.onMessage("hello", (message) => {
                 console.log(message);
             });
 
+            // 키보드 입력 감지
             window.addEventListener("keydown", function (e) {
                 if (e.which === 38) {
                     up();
@@ -92,8 +86,20 @@
                 }
             });
 
+            // 우클릭 이벤트 처리
+            window.addEventListener("contextmenu", function (e) {
+                e.preventDefault(); // 기본 컨텍스트 메뉴 방지
+
+                // 클릭한 위치의 좌표를 계산
+                const x = e.clientX;
+                const y = e.clientY;
+
+                // 서버로 목표 위치 전송
+                room.send("moveTo", { x: x, y: y });
+            });
         });
 
+        // 움직임 함수
         function up () {
             room.send("move", { y: -1 });
         }

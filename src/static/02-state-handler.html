@@ -19,6 +19,7 @@
         box-sizing: border-box;
         left: 0;
         top: 0;
+        transform: translate(-50%, -50%); /* 중앙 정렬 */
       }
     </style>
 
@@ -90,6 +91,7 @@
                 knifeDom.style.position = "absolute";
                 knifeDom.style.width = "30px";
                 knifeDom.style.display = "none"; // 초기에는 보이지 않음
+                knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
                 document.body.appendChild(knifeDom);
 
                 // 플레이어 업데이트

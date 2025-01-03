@@ -120,16 +120,37 @@ export class State extends Schema {
                 // 충돌 판정
                 this.players.forEach((otherPlayer, otherSessionId) => {
                     if (otherSessionId !== sessionId && otherPlayer.hp > 0) {
-                        const collisionDistance = 20; // 충돌 판정 거리
-                        const dist = Math.sqrt(
-                            Math.pow(player.knifeX - otherPlayer.x, 2) +
-                            Math.pow(player.knifeY - otherPlayer.y, 2)
-                        );
-                        if (dist < collisionDistance) {
+                        // 캐릭터의 경계 박스 계산
+                        const playerHalfWidth = 50; // 캐릭터 크기 100px의 절반
+                        const playerHalfHeight = 50;
+                
+                        const playerLeft = otherPlayer.x - playerHalfWidth;
+                        const playerRight = otherPlayer.x + playerHalfWidth;
+                        const playerTop = otherPlayer.y - playerHalfHeight;
+                        const playerBottom = otherPlayer.y + playerHalfHeight;
+                
+                        // 칼의 경계 박스 계산
+                        // 칼 크기 30px의 절반이 테두리긴 한데 조금 더 들어와야 될듯
+                        const knifeHalfWidth = 5; 
+                        const knifeHalfHeight = 5;
+                
+                        const knifeLeft = player.knifeX - knifeHalfWidth;
+                        const knifeRight = player.knifeX + knifeHalfWidth;
+                        const knifeTop = player.knifeY - knifeHalfHeight;
+                        const knifeBottom = player.knifeY + knifeHalfHeight;
+                
+                        // AABB 충돌 판정
+                        const isCollision = 
+                            playerRight > knifeLeft &&
+                            playerLeft < knifeRight &&
+                            playerBottom > knifeTop &&
+                            playerTop < knifeBottom;
+                
+                        if (isCollision) {
                             otherPlayer.hp -= 10; // HP 감소
                             console.log(`Player ${otherSessionId} hit! HP: ${otherPlayer.hp}`);
                             player.knifeActive = false;
-                            clearInterval(interval);
+                            clearInterval(interval); // 칼의 이동 중단
                         }
                     }
                 });

@@ -16,6 +16,16 @@ export class Player extends Schema {
 
     @type("number")
     targetY: number = this.y;
+
+    // 식칼 정보
+    @type("number")
+    knifeX: number = this.x;
+
+    @type("number")
+    knifeY: number = this.y;
+
+    @type("boolean")
+    knifeActive: boolean = false;
 }
 
 // State 클래스
@@ -37,16 +47,6 @@ export class State extends Schema {
     // removePlayer: 플레이어를 상태에서 제거
     removePlayer(sessionId: string) {
         this.players.delete(sessionId);
-    }
-
-    // movePlayer: 특정 플레이어의 위치를 이동시킴
-    movePlayer (sessionId: string, movement: any) {
-        if (movement.x) {
-            this.players.get(sessionId).x += movement.x * 10;
-
-        } else if (movement.y) {
-            this.players.get(sessionId).y += movement.y * 10;
-        }
     }
 
     // 목표 위치 설정
@@ -82,6 +82,44 @@ export class State extends Schema {
             }
         });
     }
+
+    // 식칼 날리기
+    setKnifeThrow(sessionId: string, knifeData: { targetX: number, targetY: number }) {
+        const player = this.players.get(sessionId);
+        if (player) {
+            const dx = knifeData.targetX - player.x;
+            const dy = knifeData.targetY - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+    
+            const unitX = dx / distance;
+            const unitY = dy / distance;
+    
+            // 식칼 초기화
+            player.knifeX = player.x;
+            player.knifeY = player.y;
+            player.knifeActive = true;
+    
+            // 사거리 및 속도 설정
+            const maxDistance = 500;
+            const speed = 10;
+            let traveledDistance = 0; // 칼이 이동한 거리 추적
+    
+            const interval = setInterval(() => {
+                if (!player.knifeActive || traveledDistance >= maxDistance) {
+                    player.knifeActive = false;
+                    clearInterval(interval);
+                    return;
+                }
+    
+                // 칼의 위치 업데이트
+                player.knifeX += unitX * speed;
+                player.knifeY += unitY * speed;
+    
+                // 이동한 거리 누적
+                traveledDistance += speed;
+            }, 16);
+        }
+    }
 }
 
 // StateHandlerRoom 클래스: Colyseus의 Room을 상속받아 방의 동작을 정의.
@@ -97,17 +135,17 @@ export class StateHandlerRoom extends Room<State> {
         // this.setState(new State()): 새로운 상태 인스턴스를 생성하여 방의 상태로 설정.
         this.setState(new State());
 
-        // onMessage("move", ...): 클라이언트로부터 "move" 메시지를 받으면 해당 플레이어의 위치를 업데이트.
-        this.onMessage("move", (client, data) => {
-            console.log("StateHandlerRoom received message from", client.sessionId, ":", data);
-            this.state.movePlayer(client.sessionId, data);
-        });
-
-        // "moveTo" 메시지 처리
+        // 우클릭 움직임 메시지 처리
         this.onMessage("moveTo", (client, data) => {
             console.log("StateHandlerRoom received moveTo from", client.sessionId, ":", data);
             this.state.setTargetPosition(client.sessionId, data);
         });
+
+        // 식칼 던지기 메시지 처리
+        this.onMessage("throwKnife", (client, data) => {
+            console.log(`Received throwKnife from ${client.sessionId}`);
+            this.state.setKnifeThrow(client.sessionId, data);
+        });         
 
         // 주기적으로 플레이어 위치 업데이트 (예: 60 FPS -> 16ms 간격)
         this.setSimulationInterval((deltaTime) => {

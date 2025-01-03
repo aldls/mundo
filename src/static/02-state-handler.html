@@ -41,15 +41,21 @@
             var players = {};
             var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
 
+            // 마우스 위치 저장
+            let mouseX = 0;
+            let mouseY = 0;
+
             // 새로운 플레이어 추가
             room.state.players.onAdd(function (player, sessionId) {
-                var dom = document.createElement("div");
+                // 플레이어 DOM 추가
+                const dom = document.createElement("div");
                 dom.className = "player";
                 dom.style.left = player.x + "px";
                 dom.style.top = player.y + "px";
                 dom.style.background = colors[Math.floor(Math.random() * colors.length)];
                 dom.innerText = "Player " + sessionId;
 
+                // 플레이어 위치 업데이트
                 player.onChange(function (changes) {
                     dom.style.left = player.x + "px";
                     dom.style.top = player.y + "px";
@@ -57,6 +63,26 @@
 
                 players[sessionId] = dom;
                 document.body.appendChild(dom);
+
+                // 식칼 DOM 추가
+                const knifeDom = document.createElement("img");
+                knifeDom.id = `knife-${sessionId}`;
+                knifeDom.src = "knife.png"; // 이미지 경로 설정
+                knifeDom.style.position = "absolute";
+                knifeDom.style.width = "30px";
+                knifeDom.style.display = "none"; // 초기에는 보이지 않음
+                document.body.appendChild(knifeDom);
+
+                // 식칼 위치 업데이트
+                player.onChange(function (changes) {
+                    if (player.knifeActive) {
+                        knifeDom.style.left = `${player.knifeX}px`;
+                        knifeDom.style.top = `${player.knifeY}px`;
+                        knifeDom.style.display = "block";
+                    } else {
+                        knifeDom.style.display = "none";
+                    }
+                });
             });
 
             // 플레이어 제거
@@ -69,21 +95,45 @@
             room.onMessage("hello", (message) => {
                 console.log(message);
             });
+            
+            room.state.players.onChange(function (player, changes) {
+                console.log(`Player ${player.sessionId} state changed:`, changes);
+
+                let knifeDom = document.getElementById(`knife-${player.sessionId}`);
+                if (!knifeDom) {
+                    // 식칼 DOM 요소 생성
+                    knifeDom = document.createElement("img");
+                    knifeDom.id = `knife-${player.sessionId}`;
+                    knifeDom.src = "knife.png";
+                    knifeDom.style.position = "absolute";
+                    knifeDom.style.width = "30px";
+                    document.body.appendChild(knifeDom);
+                }
+
+                if (player.knifeActive) {
+                    // 식칼을 지정된 위치에 표시
+                    knifeDom.style.left = `${player.knifeX}px`;
+                    knifeDom.style.top = `${player.knifeY}px`;
+                    knifeDom.style.display = "block";
+                    console.log(`Knife displayed at (${player.knifeX}, ${player.knifeY})`);
+                } else {
+                    // 식칼 숨기기
+                    knifeDom.style.display = "none";
+                    console.log(`Knife hidden`);
+                }
+            });
 
             // 키보드 입력 감지
             window.addEventListener("keydown", function (e) {
-                if (e.which === 38) {
-                    up();
-
-                } else if (e.which === 39) {
-                    right();
-
-                } else if (e.which === 40) {
-                    down();
-
-                } else if (e.which === 37) {
-                    left();
+                if (e.key === 'q') {
+                    room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
                 }
+            });
+
+            // 마우스 위치 찾기
+            window.addEventListener("mousemove", function (e) {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
             });
 
             // 우클릭 이벤트 처리
@@ -98,24 +148,6 @@
                 room.send("moveTo", { x: x, y: y });
             });
         });
-
-        // 움직임 함수
-        function up () {
-            room.send("move", { y: -1 });
-        }
-
-        function right () {
-            room.send("move", { x: 1 });
-        }
-
-        function down () {
-            room.send("move", { y: 1 })
-        }
-
-        function left () {
-            room.send("move", { x: -1 })
-        }
-
 
     </script>
   </body>

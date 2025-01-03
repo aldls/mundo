@@ -26,6 +26,10 @@ export class Player extends Schema {
 
     @type("boolean")
     knifeActive: boolean = false;
+
+     // 기본 HP 100
+    @type("number")
+    hp: number = 100;
 }
 
 // State 클래스
@@ -94,15 +98,13 @@ export class State extends Schema {
             const unitX = dx / distance;
             const unitY = dy / distance;
     
-            // 식칼 초기화
             player.knifeX = player.x;
             player.knifeY = player.y;
             player.knifeActive = true;
     
-            // 사거리 및 속도 설정
             const maxDistance = 500;
             const speed = 10;
-            let traveledDistance = 0; // 칼이 이동한 거리 추적
+            let traveledDistance = 0;
     
             const interval = setInterval(() => {
                 if (!player.knifeActive || traveledDistance >= maxDistance) {
@@ -111,15 +113,29 @@ export class State extends Schema {
                     return;
                 }
     
-                // 칼의 위치 업데이트
                 player.knifeX += unitX * speed;
                 player.knifeY += unitY * speed;
-    
-                // 이동한 거리 누적
                 traveledDistance += speed;
+    
+                // 충돌 판정
+                this.players.forEach((otherPlayer, otherSessionId) => {
+                    if (otherSessionId !== sessionId && otherPlayer.hp > 0) {
+                        const collisionDistance = 20; // 충돌 판정 거리
+                        const dist = Math.sqrt(
+                            Math.pow(player.knifeX - otherPlayer.x, 2) +
+                            Math.pow(player.knifeY - otherPlayer.y, 2)
+                        );
+                        if (dist < collisionDistance) {
+                            otherPlayer.hp -= 10; // HP 감소
+                            console.log(`Player ${otherSessionId} hit! HP: ${otherPlayer.hp}`);
+                            player.knifeActive = false;
+                            clearInterval(interval);
+                        }
+                    }
+                });
             }, 16);
         }
-    }
+    }    
 }
 
 // StateHandlerRoom 클래스: Colyseus의 Room을 상속받아 방의 동작을 정의.
@@ -127,7 +143,7 @@ export class State extends Schema {
 export class StateHandlerRoom extends Room<State> {
     maxClients = 4;
 
-// 메서드:
+    // 메서드:
     // onCreate: 방이 생성될 때 호출. 초기 상태를 설정하고, "move" 메시지를 처리하는 핸들러를 등록.
     onCreate (options) {
         console.log("StateHandlerRoom created!", options);

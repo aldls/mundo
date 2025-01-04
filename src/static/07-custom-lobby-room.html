@@ -230,20 +230,27 @@
           el.innerHTML = allRooms
             .map(function (room) {
               return `
-                <div class="room-item">
-                  <div class="room-details">
-                    <div class="room-name">${room.name || '이름 없는 방'}</div>
-                    <div class="room-info">
-                      <span>ID: ${room.roomId}</span> |
-                      <span>플레이어: ${room.clients}/${room.maxClients || 'N/A'}</span> |
-                      <span>상태: ${room.status || '알 수 없음'}</span>
-                    </div>
+              <div class="room-item">
+                <div class="room-details">
+                  <div class="room-name">${room.name || "이름 없는 방"}</div>
+                  <div class="room-info">
+                    <span>ID: ${room.roomId}</span> |
+                    <span>플레이어: ${room.clients}/${
+                room.maxClients || "N/A"
+              }</span>
                   </div>
-                  <button class="join-button" onclick="joinRoom('${room.roomId}')">참가하기</button>
                 </div>
-              `;
+                <button class="join-button" onclick="redirectToRoom('${
+                  room.roomId
+                }')">참가하기</button>
+              </div>`;
             })
             .join("\n");
+        }
+
+        // 특정 roomId로 리다이렉트
+        function redirectToRoom(roomId) {
+          window.location.href = `http://${host}:2567/06-relay-room.html?roomId=${roomId}`;
         }
 
         function refreshRooms() {

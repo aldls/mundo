@@ -5,12 +5,6 @@
 
     <style>
       body { font-family: Tahoma, Geneva, sans-serif; }
-    </style>
-
-    <!-- colyseus.js client -->
-    <script type="text/javascript" src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
-
-    <style type="text/css">
       .player {
         width: 100px;
         height: 100px;
@@ -19,145 +13,260 @@
         box-sizing: border-box;
         left: 0;
         top: 0;
+        transform: translate(-50%, -50%); /* 중앙 정렬 */
+      }
+      .hp-bar-container {
+        position: absolute;
+        width: 100px;
+        height: 10px;
+        background-color: black; /* HP 바의 배경 (깎인 부분) */
+        border: 1px solid #333; /* 테두리 */
+        top: -15px; /* 캐릭터 위에 위치하도록 조정 */
+      }
+      .hp-bar {
+        height: 100%; /* HP 바 높이 */
+      }
+      .img {
+        animation: rotate_image 1s linear infinite; /* 1초 동안 회전, 무한 반복 */
+        transform-origin: 50% 50%; /* 중앙을 기준으로 회전 */
+      }
+      @keyframes rotate_image {
+        from {
+          transform: rotate(0deg); /* 시작 각도 */
+        }
+        to {
+          transform: rotate(-360deg); /* 끝 각도 (시계 반대방향) */
+        }
+      }
+      #roomInfo {
+        margin-top: 20px;
       }
     </style>
-
   </head>
   <body>
-    <h1>
-      <a href="https://github.com/colyseus/colyseus-examples"><img src="https://cdn.jsdelivr.net/gh/colyseus/colyseus@master/media/header.png" height="100" alt="colyseus" /></a>
-    </h1>
+    <strong>Room Management</strong><br><br>
 
-    <p>This example shows how to use <code>RelayRoom</code>:</p>
-    <ul>
-        <li>Messages are broadcasted to all other clients.</li>
-        <li>It is <strong>client-authoritative</strong> instead of <strong>server-authoritative</strong>.</li>
-        <li><a href="https://docs.colyseus.io/builtin-rooms/relay/">See documentation</a></li>
-    </ul>
+    <!-- **방 ID 입력 및 참여 인터페이스** -->
+    <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
+    <button id="joinButton">Join Room by ID</button>
 
-    <strong>commands</strong><br>
+    <br><br>
 
-    <input type="text" id="username" placeholder="Enter your name" />
-    <button onclick="join()">Join RelayRoom</button>
-    <button onclick="leave()">Leave room</button>
+    <!-- **방 생성 버튼 및 방 ID 표시** -->
+    <button id="createButton">Create New Room</button>
+    <div id="roomInfo"></div>
 
-    <br />
-    <button onclick="up()">up</button>
-    <button onclick="down()">down</button>
-    <br />
-    <button onclick="left()">left</button>
-    <button onclick="right()">right</button>
-
+    <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
     <script>
-        var host = window.document.location.host.replace(/:.*/, '');
+      // 서버와의 연결 설정
+      const host = window.document.location.host.replace(/:.*/, '');
+      const client = new Colyseus.Client(
+        location.protocol.replace('http', 'ws') +
+          '//' +
+          host +
+          (location.port ? ':' + location.port : '')
+      );
 
-        var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
-        var room;
+      // URL에서 roomId 추출
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomId = urlParams.get('roomId');
+      let room;
 
-        var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
+      // 방에 참여하는 함수
+      function joinRoom(roomId) {
+        client
+          .joinById(roomId)
+          .then((room_instance) => {
+            room = room_instance;
+            document.getElementById('roomInfo').innerText = `방에 성공적으로 참여했습니다: ${room.id}`;
+            console.log(`방에 성공적으로 참여했습니다: ${room.id}`);
+            setupRoomHandlers();
+          })
+          .catch((e) => {
+            console.error('방 참여 실패:', e);
+            alert('방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.');
+          });
+      }
+      // 페이지 로드 시 자동으로 방 참여
+      if (roomId) {
+        joinRoom(roomId);
+      } else {
+        alert('유효한 Room ID가 필요합니다.');
+        console.error('URL에서 Room ID를 찾을 수 없습니다.');
+      }
+      // **방에 참여하는 함수**
+      function joinRoomById(roomId) {
+        client.joinById(roomId).then(room_instance => {
+          room = room_instance;
+          console.log(`방에 성공적으로 참여했습니다: ${room.id}`);
+          setupRoomHandlers();
+        }).catch(e => {
+          console.error("방 참여 실패:", e);
+          alert("방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.");
+        });
+      }
+
+      // **새로운 방을 생성하는 함수**
+      function createNewRoom() {
+        client.create("state_handler").then(room_instance => {
+          room = room_instance;
+          console.log(`새로운 방을 생성했습니다: ${room.id}`);
+          document.getElementById("roomInfo").innerText = `방 ID: ${room.id} (공유하여 다른 사용자가 참여할 수 있습니다.)`;
+          setupRoomHandlers();
+        }).catch(e => {
+          console.error("방 생성 실패:", e);
+          alert("방 생성에 실패했습니다.");
+        });
+      }
+
+      // **방 핸들러 설정 함수**
+      function setupRoomHandlers() {
+        // 플레이어 관리
         var players = {};
+        var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
 
-        function join() {
-            client.joinOrCreate("relay", {
-                name: document.getElementById('username').value
-            }).then(room_instance => {
-                room = room_instance
+        // 마우스 위치 저장
+        let mouseX = 0;
+        let mouseY = 0;
 
-                room.onLeave(() => console.log("Bye, bye."));
+        // 새로운 플레이어 추가
+        room.state.players.onAdd(function (player, sessionId) {
+          // 플레이어 DOM 추가
+          const dom = document.createElement("div");
+          dom.className = "player";
+          dom.style.left = player.x + "px";
+          dom.style.top = player.y + "px";
+          dom.style.background = colors[Math.floor(Math.random() * colors.length)];
+          dom.innerText = `Player ${sessionId}`;
 
-                room.onMessage('move', ([sessionId, movement]) => {
-                    local_move(sessionId, movement);
-                });
+          // HP 바 컨테이너 생성
+          const hpBarContainer = document.createElement("div");
+          hpBarContainer.className = "hp-bar-container";
+          dom.appendChild(hpBarContainer);
 
-                // listen to patches coming from the server
-                room.state.players.onAdd(function (player, sessionId) {
-                    var dom = document.createElement("div");
-                    dom.className = "player";
-                    dom.style.left = "0px";
-                    dom.style.top = "0px";
-                    dom.style.background = colors[Math.floor(Math.random() * colors.length)];
-                    dom.innerText = `${player.name || "[no name]"} (${sessionId})`;
+          // HP 바 생성
+          const hpBar = document.createElement("div");
+          hpBar.className = "hp-bar";
+          hpBar.style.backgroundColor = dom.style.background; // 플레이어 색과 동일
+          hpBar.style.width = "100%"; // 초기 HP 100%
+          hpBarContainer.appendChild(hpBar);
 
-                    players[sessionId] = dom;
-                    document.body.appendChild(dom);
-                });
+          // 식칼 DOM 추가
+          const knifeDom = document.createElement("img");
+          knifeDom.className = "img";
+          knifeDom.id = `knife-${sessionId}`;
+          knifeDom.src = "knife.png"; // 이미지 경로 설정
+          knifeDom.style.position = "absolute";
+          knifeDom.style.width = "30px";
+          knifeDom.style.display = "none"; // 초기에는 보이지 않음
+          knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
+          document.body.appendChild(knifeDom);
 
-                room.state.players.onRemove(function (player, sessionId) {
-                    document.body.removeChild(players[sessionId]);
-                    delete players[sessionId];
-                });
+          // 애니메이션 변수
+          let currentX = player.x;
+          let currentY = player.y;
+          function animate() {
+            // 목표 위치 계산
+            const targetX = player.x;
+            const targetY = player.y;
 
-                window.addEventListener("keydown", function (e) {
-                    if (e.which === 38) {
-                        up();
+            // 부드러운 이동 (보간)
+            const speed = 0.1; // 이동 속도 (0 ~ 1 사이)
+            currentX += (targetX - currentX) * speed;
+            currentY += (targetY - currentY) * speed;
 
-                    } else if (e.which === 39) {
-                        right();
+            // DOM 업데이트
+            dom.style.left = `${currentX}px`;
+            dom.style.top = `${currentY}px`;
 
-                    } else if (e.which === 40) {
-                        down();
-
-                    } else if (e.which === 37) {
-                        left();
-                    }
-                });
-
-            });
-        }
-
-        function leave() {
-            if (room) {
-                room.leave();
+            // 목표 위치에 거의 도달했는지 확인
+            if (Math.abs(targetX - currentX) > 0.1 || Math.abs(targetY - currentY) > 0.1) {
+              requestAnimationFrame(animate); // 계속 애니메이션 실행
             }
-        }
+          }
 
-        function local_move(sessionId, movement) {
-            var dom = players[sessionId];
-            if (movement.x) {
-                dom.style.left = parseInt(dom.style.left) + movement.x + "px";
+          // 플레이어 업데이트
+          player.onChange(function (changes) {
+            // 플레이어 위치 업데이트
+            requestAnimationFrame(animate);
+
+            // HP 바 업데이트
+            const hpPercentage = Math.max(player.hp, 0) + "%";
+            hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
+
+            // 플레이어 Knife 상태 업데이트
+            if (player.knifeActive) {
+              knifeDom.style.left = `${player.knifeX}px`;
+              knifeDom.style.top = `${player.knifeY}px`;
+              knifeDom.style.display = "block";
+            } else {
+              knifeDom.style.display = "none";
             }
-            if (movement.y) {
-                dom.style.top = parseInt(dom.style.top) + movement.y + "px";
-            }
+          });
+
+          players[sessionId] = dom;
+          document.body.appendChild(dom);
+        });
+
+        // 플레이어 제거
+        room.state.players.onRemove(function (player, sessionId) {
+          if (players[sessionId]) {
+            document.body.removeChild(players[sessionId]);
+            delete players[sessionId];
+          }
+        });
+
+        // 서버 메시지 핸들링 (필요 시)
+        room.onMessage("hello", (message) => {
+          console.log(message);
+        });
+
+        // 키보드 입력 감지 (칼 던지기)
+        let canThrowKnife = true; // 쿨타임 상태를 추적하는 변수
+        const knifeCooldown = 2000; // 쿨타임 시간 (밀리초)
+        window.addEventListener("keydown", function (e) {
+          if (e.key === 'q' && canThrowKnife) {
+            room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
+            canThrowKnife = false; // 쿨타임 시작
+            setTimeout(() => {
+              canThrowKnife = true; // 쿨타임 종료
+            }, knifeCooldown);
+          }
+        });
+
+        // 마우스 위치 찾기
+        window.addEventListener("mousemove", function (e) {
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+        });
+
+        // 우클릭 이벤트 처리 (이동 명령)
+        window.addEventListener("contextmenu", function (e) {
+          e.preventDefault(); // 기본 컨텍스트 메뉴 방지
+
+          // 클릭한 위치의 좌표 계산
+          const x = e.clientX;
+          const y = e.clientY;
+
+          // 서버로 목표 위치 전송
+          room.send("moveTo", { x: x, y: y });
+        });
+      }
+
+      // **방 참여 버튼 이벤트 리스너**
+      document.getElementById("joinButton").addEventListener("click", function() {
+        const roomId = document.getElementById("roomIdInput").value.trim();
+        if (!roomId) {
+          alert("방 ID를 입력하세요.");
+          return;
         }
+        joinRoomById(roomId);
+      });
 
-        function up () {
-            var movement = { y: -10 };
-
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
-
-        function right () {
-            var movement = { x: 10 };
-
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
-
-        function down () {
-            var movement = { y: 10 };
-
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
-
-        function left () {
-            var movement = { x: -10 };
-
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
-
+      // **방 생성 버튼 이벤트 리스너**
+      document.getElementById("createButton").addEventListener("click", function() {
+        createNewRoom();
+      });
     </script>
-
   </body>
 </html>

@@ -1,0 +1,62 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* Aligns content to the bottom */
+    height: 100vh;
+    background-image: url('/loading.jpg'); /* Set the background image */
+    background-size: contain; /* Ensure the image stays centered without stretching */
+    background-position: center center; /* Center the background image */
+    background-repeat: no-repeat; /* Prevent repeating the image */
+    font-family: Arial, sans-serif;
+    background-color: #010A13; /* Ensure the background color is black in empty areas */
+
+  }
+  
+  .loading-image {
+    width: 200px; /* Adjust the size of the small image */
+    height: auto; /* Maintain the aspect ratio */
+    margin-bottom: 20px; /* Space between the image and loading bar */
+  }
+  
+  .loading-container {
+    text-align: center;
+    position: fixed; /* Fixes the position relative to the viewport */
+    bottom: 35vh; /* Positions the container 45% from the bottom */
+    width: 100%; /* Makes the container take the full width of the screen */
+    left: 0;
+    right: 0;
+  }
+  
+  .loading-bar-background {
+    width: 30%; /* Adjust this to make the loading bar wider or thinner */
+    height: 12px; /* Thinner loading bar */
+    background-color: black;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 3px solid #C89B3C; /* Golden border around the loading bar */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%); /* Centers the bar horizontally */
+  }
+  
+  .loading-bar {
+    height: 100%;
+    width: 0%; /* Initially set to 0% to show the loading process */
+    background-color: #0397AB; /* Blue color for the loading bar */
+    border-radius: 10px;
+    transition: width 0.1s ease-in-out;
+  }
+  
+  .percentage {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    margin-top: 50px; /* Adds space between the loading bar and the percentage text */
+  }
+  

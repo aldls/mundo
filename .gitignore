@@ -1,0 +1,9 @@
+.env
+*.log         # Ignores all `.log` files
+*.tmp         # Ignores all `.tmp` files
+secret.txt    # Ignores the `secret.txt` file
+/build/       # Ignores the `build` directory at the root level
+/temp/*       # Ignores all files inside `temp` but keeps the `temp` folder
+*~            # Ignores all files ending with `~` (commonly backup files)
+*.log         # Ignores all `.log` files
+!important.log # But not `important.log`

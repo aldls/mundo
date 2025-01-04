@@ -111,11 +111,36 @@
                 knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
                 document.body.appendChild(knifeDom);
 
+
+                // 애니메이션 변수
+                let currentX = player.x;
+                let currentY = player.y;
+                function animate() {
+                    // 목표 위치 계산
+                    const targetX = player.x;
+                    const targetY = player.y;
+
+                    // 부드러운 이동 (보간)
+                    const speed = 0.1; // 이동 속도 (0 ~ 1 사이)
+                    currentX += (targetX - currentX) * speed;
+                    currentY += (targetY - currentY) * speed;
+
+                    // DOM 업데이트
+                    dom.style.left = `${currentX}px`;
+                    dom.style.top = `${currentY}px`;
+
+                    // 목표 위치에 거의 도달했는지 확인
+                    if (Math.abs(targetX - currentX) > 0.1 || Math.abs(targetY - currentY) > 0.1) {
+                        requestAnimationFrame(animate); // 계속 애니메이션 실행
+                    }
+                }
+
                 // 플레이어 업데이트
                 player.onChange(function (changes) {
                     // 플레이어 위치
-                    dom.style.left = player.x + "px";
-                    dom.style.top = player.y + "px";
+                    //dom.style.left = player.x + "px";
+                    //dom.style.top = player.y + "px";
+                    requestAnimationFrame(animate);
 
                     // HP 바 업데이트
                     const hpPercentage = Math.max(player.hp, 0) + "%";

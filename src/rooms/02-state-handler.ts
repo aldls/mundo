@@ -95,6 +95,8 @@ export class State extends Schema {
             const dy = knifeData.targetY - player.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
     
+            if (distance === 0) return; // Avoid division by zero
+
             const unitX = dx / distance;
             const unitY = dy / distance;
     

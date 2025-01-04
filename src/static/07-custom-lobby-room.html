@@ -26,18 +26,26 @@
 
     <p><strong>Commands</strong></p>
 
-    <button onclick="join()">join lobby</button>
-    <button onclick="leave()">leave lobby</button>
+    <button onclick="joinLobby()">join lobby</button>
+    <button onclick="leaveLobby()">leave lobby</button>
 
     <h2>All rooms:</h2>
     <ul id="all_rooms"></ul>
+
+    <h1>Join or Create a Game Room</h1>
+
+    <input type="text" id="roomName" placeholder="Enter Room Name">
+
+    <button onclick="join()" id="joinButton">Join Room </button>
+    <button onclick="create()" id="createButton">Create Room</button>
 
     <script>
       var host = window.document.location.host.replace(/:.*/, '');
       var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
       var lobby;
+      var room;
 
-      function join () {
+      function joinLobby () {
         // Logged into your app and Facebook.
         client.joinOrCreate("custom_lobby").then(room_instance => {
             lobby = room_instance;
@@ -47,6 +55,24 @@
 
         }).catch(e => {
             console.error("Error", e);
+        });
+      }
+
+      function join() {
+        var RoomName = document.getElementById("roomName").value;
+        console.log(RoomName);
+        client.joinById(RoomName).then(room_instance => {
+          room = room_instance;
+          console.log(room.serializer);
+        });
+      }
+
+      function create(){
+        var RoomName = document.getElementById("createButton").value;
+        console.log("RoomName");
+        client.create("RoomName").then(room_instance =>{
+          room = room_instance;
+          console.log(room.serializer);
         });
       }
 
@@ -87,16 +113,16 @@
               console.log("Bye, bye!");
           });
       }
-
+      // 화면에서 list 띄우는 부분
       function update_full_list() {
         var el = document.getElementById('all_rooms');
         el.innerHTML = allRooms.map(function(room) {
-            return "<li><code>" + JSON.stringify(room) + "</code></li>";
+            return "<li><code>" + "name: " + room.name + ", " + "member: " + room.clients + "</code></li>";
         }).join("\n");
 
       }
 
-      function leave() {
+      function leaveLobby() {
         if (lobby) {
           lobby.leave();
 

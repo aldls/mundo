@@ -10,85 +10,175 @@
     <!-- colyseus.js client -->
     <script type="text/javascript" src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
 
+    <style type="text/css">
+      .player {
+        width: 100px;
+        height: 100px;
+        position: absolute;
+        padding-top: 24px;
+        box-sizing: border-box;
+        left: 0;
+        top: 0;
+        transform: translate(-50%, -50%); /* 중앙 정렬 */
+      }
+    </style>
+
+    <style>
+        .hp-bar-container {
+        position: absolute;
+        width: 100px;
+        height: 10px;
+        background-color: black; /* HP 바의 배경 (깎인 부분) */
+        border: 1px solid #333; /* 테두리 */
+        top: -15px; /* 캐릭터 위에 위치하도록 조정 */
+        }
+    
+        .hp-bar {
+        height: 100%; /* HP 바 높이 */
+        }
+    </style>
+
+    <style>
+        .img {
+        animation: rotate_image 1s linear infinite; /* 1초 동안 회전, 무한 반복 */
+        transform-origin: 50% 50%; /* 중앙을 기준으로 회전 */
+        }
+    
+        @keyframes rotate_image {
+        from {
+            transform: rotate(0deg); /* 시작 각도 */
+        }
+        to {
+            transform: rotate(-360deg); /* 끝 각도 (시계 반대방향) */
+        }
+        }
+    </style>
+  
+
   </head>
   <body>
-    <h1>
-      <a href="https://github.com/colyseus/colyseus-examples"><img src="https://cdn.jsdelivr.net/gh/colyseus/colyseus@master/media/header.png" height="100" alt="colyseus" /></a>
-    </h1>
-
-    <p>This example shows how to authenticate and retrieve user data before the websocket handshake.</p>
-
-    <p>Open Developer Tools for log messages.</p>
-
-    <p><strong>Commands</strong></p>
-
-    <button onclick="login()">Login</button>
-    <button onclick="join_without_token()">Try to joinOrCreate without token</button>
-
-    <p><em><small>We <strong>do not</strong> store any data from your Facebook account during this process. Facebook is only used as an example of authentication provider.</small></em></p>
+    <strong>commands</strong><br>
 
     <script>
-        window.fbAsyncInit = function () {
-            FB.init({
-                appId: '135829507120512',
-                cookie: true,  // enable cookies to allow the server to access
-                // the session
-                xfbml: true,  // parse social plugins on this page
-                version: 'v2.8' // use graph api version 2.8
-            });
-        }
-    </script>
+        // 서버와의 연결
+        var host = window.document.location.host.replace(/:.*/, '');
 
-    <script>
-      var host = window.document.location.host.replace(/:.*/, '');
+        var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
+        var room;
 
-      var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//"  + host + (location.port ? ':' + location.port : ''));
-
-      function join_without_token () {
-        // Logged into your app and Facebook.
+        // 방 또는 생성
         client.joinOrCreate("auth").then(room_instance => {
-            console.log("Joined successfully!"); // never reached!
+            room = room_instance
 
-        }).catch(e => {
-            console.error("Error", e);
+            // 플레이어 관리
+            var players = {};
+            var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
+
+            // 마우스 위치 저장
+            let mouseX = 0;
+            let mouseY = 0;
+
+            // 새로운 플레이어 추가
+            room.state.players.onAdd(function (player, sessionId) {
+                // 플레이어 DOM 추가
+                const dom = document.createElement("div");
+                dom.className = "player";
+                dom.style.left = player.x + "px";
+                dom.style.top = player.y + "px";
+                dom.style.background = colors[Math.floor(Math.random() * colors.length)];
+                dom.innerText = `Player ${sessionId}`;
+
+                // HP 바 컨테이너 생성
+                const hpBarContainer = document.createElement("div");
+                hpBarContainer.className = "hp-bar-container";
+                dom.appendChild(hpBarContainer);
+
+                // HP 바 생성
+                const hpBar = document.createElement("div");
+                hpBar.className = "hp-bar";
+                hpBar.style.backgroundColor = dom.style.background; // 플레이어 색과 동일
+                hpBar.style.width = "100%"; // 초기 HP 100%
+                hpBarContainer.appendChild(hpBar);
+
+                // 식칼 DOM 추가
+                const knifeDom = document.createElement("img");
+                knifeDom.className = "img";
+                knifeDom.id = `knife-${sessionId}`;
+                knifeDom.src = "knife.png"; // 이미지 경로 설정
+                knifeDom.style.position = "absolute";
+                knifeDom.style.width = "30px";
+                knifeDom.style.display = "none"; // 초기에는 보이지 않음
+                knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
+                document.body.appendChild(knifeDom);
+
+                // 플레이어 업데이트
+                player.onChange(function (changes) {
+                    // 플레이어 위치
+                    dom.style.left = player.x + "px";
+                    dom.style.top = player.y + "px";
+
+                    // HP 바 업데이트
+                    const hpPercentage = Math.max(player.hp, 0) + "%";
+                    hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
+
+                    // 플레이어 Knife
+                    if (player.knifeActive) {
+                        knifeDom.style.left = `${player.knifeX}px`;
+                        knifeDom.style.top = `${player.knifeY}px`;
+                        knifeDom.style.display = "block";
+                    } else {
+                        knifeDom.style.display = "none";
+                    }
+                });
+
+                players[sessionId] = dom;
+                document.body.appendChild(dom);
+
+            });
+
+            // 플레이어 제거
+            room.state.players.onRemove(function (player, sessionId) {
+                document.body.removeChild(players[sessionId]);
+                delete players[sessionId];
+            });
+
+            // 서버 메시지 핸들링 (?)
+            room.onMessage("hello", (message) => {
+                console.log(message);
+            });
+
+            // 키보드 입력 감지
+            let canThrowKnife = true; // 쿨타임 상태를 추적하는 변수
+            const knifeCooldown = 2000; // 쿨타임 시간 (밀리초)
+            window.addEventListener("keydown", function (e) {
+                if (e.key === 'q' && canThrowKnife) {
+                    room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
+                    canThrowKnife = false; // 쿨타임 시작
+                    setTimeout(() => {
+                        canThrowKnife = true; // 쿨타임 종료
+                    }, knifeCooldown);
+                }
+            });
+
+            // 마우스 위치 찾기
+            window.addEventListener("mousemove", function (e) {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+
+            // 우클릭 이벤트 처리
+            window.addEventListener("contextmenu", function (e) {
+                e.preventDefault(); // 기본 컨텍스트 메뉴 방지
+
+                // 클릭한 위치의 좌표를 계산
+                const x = e.clientX;
+                const y = e.clientY;
+
+                // 서버로 목표 위치 전송
+                room.send("moveTo", { x: x, y: y });
+            });
         });
-      }
 
-      function login () {
-          FB.login(function (response) {
-              // Handle the response object, like in statusChangeCallback() in our demo
-              // code.
-              // The response object is returned with a status field that lets the
-              // app know the current login status of the person.
-              // Full docs on the response object can be found in the documentation
-              // for FB.getLoginStatus().
-              if (response.status === 'connected') {
-                  // Logged into your app and Facebook.
-                  client.joinOrCreate("auth", {
-                      accessToken: response.authResponse.accessToken
-                  }).then(room => {
-                      console.log("Joined successfully!");
-                  }).catch(e => {
-                      console.error("Error", e);
-                  });
-
-              } else {
-                  console.log("not connected", response.authResponse);
-              }
-          });
-      }
     </script>
-
-    <script>
-        // Load the Facebook SDK asynchronously
-        (function(d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) return;
-            js = d.createElement(s); js.id = id;
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
-    </script>
-
   </body>
 </html>

@@ -86,6 +86,7 @@
                 dom.style.left = player.x + "px";
                 dom.style.top = player.y + "px";
                 dom.style.background = colors[Math.floor(Math.random() * colors.length)];
+                dom.src = "mundoface.png";
                 dom.innerText = `Player ${sessionId}`;
 
                 // HP 바 컨테이너 생성
@@ -104,9 +105,9 @@
                 const knifeDom = document.createElement("img");
                 knifeDom.className = "img";
                 knifeDom.id = `knife-${sessionId}`;
-                knifeDom.src = "knife.png"; // 이미지 경로 설정
+                knifeDom.src = "bonesaw.png"; // 이미지 경로 설정
                 knifeDom.style.position = "absolute";
-                knifeDom.style.width = "30px";
+                knifeDom.style.width = "60px";
                 knifeDom.style.display = "none"; // 초기에는 보이지 않음
                 knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
                 document.body.appendChild(knifeDom);

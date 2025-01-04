@@ -19,145 +19,166 @@
         box-sizing: border-box;
         left: 0;
         top: 0;
+        transform: translate(-50%, -50%); /* 중앙 정렬 */
       }
     </style>
 
+    <style>
+        .hp-bar-container {
+        position: absolute;
+        width: 100px;
+        height: 10px;
+        background-color: black; /* HP 바의 배경 (깎인 부분) */
+        border: 1px solid #333; /* 테두리 */
+        top: -15px; /* 캐릭터 위에 위치하도록 조정 */
+        }
+    
+        .hp-bar {
+        height: 100%; /* HP 바 높이 */
+        }
+    </style>
+
+    <style>
+        .img {
+        animation: rotate_image 1s linear infinite; /* 1초 동안 회전, 무한 반복 */
+        transform-origin: 50% 50%; /* 중앙을 기준으로 회전 */
+        }
+    
+        @keyframes rotate_image {
+        from {
+            transform: rotate(0deg); /* 시작 각도 */
+        }
+        to {
+            transform: rotate(-360deg); /* 끝 각도 (시계 반대방향) */
+        }
+        }
+    </style>
+  
+
   </head>
   <body>
-    <h1>
-      <a href="https://github.com/colyseus/colyseus-examples"><img src="https://cdn.jsdelivr.net/gh/colyseus/colyseus@master/media/header.png" height="100" alt="colyseus" /></a>
-    </h1>
-
-    <p>This example shows how to use <code>RelayRoom</code>:</p>
-    <ul>
-        <li>Messages are broadcasted to all other clients.</li>
-        <li>It is <strong>client-authoritative</strong> instead of <strong>server-authoritative</strong>.</li>
-        <li><a href="https://docs.colyseus.io/builtin-rooms/relay/">See documentation</a></li>
-    </ul>
-
     <strong>commands</strong><br>
 
-    <input type="text" id="username" placeholder="Enter your name" />
-    <button onclick="join()">Join RelayRoom</button>
-    <button onclick="leave()">Leave room</button>
-
-    <br />
-    <button onclick="up()">up</button>
-    <button onclick="down()">down</button>
-    <br />
-    <button onclick="left()">left</button>
-    <button onclick="right()">right</button>
-
     <script>
+        // 서버와의 연결
         var host = window.document.location.host.replace(/:.*/, '');
 
         var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
         var room;
 
-        var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
-        var players = {};
+        // 방 또는 생성
+        client.joinOrCreate("relay").then(room_instance => {
+            room = room_instance
 
-        function join() {
-            client.joinOrCreate("relay", {
-                name: document.getElementById('username').value
-            }).then(room_instance => {
-                room = room_instance
+            // 플레이어 관리
+            var players = {};
+            var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
 
-                room.onLeave(() => console.log("Bye, bye."));
+            // 마우스 위치 저장
+            let mouseX = 0;
+            let mouseY = 0;
 
-                room.onMessage('move', ([sessionId, movement]) => {
-                    local_move(sessionId, movement);
-                });
+            // 새로운 플레이어 추가
+            room.state.players.onAdd(function (player, sessionId) {
+                // 플레이어 DOM 추가
+                const dom = document.createElement("div");
+                dom.className = "player";
+                dom.style.left = player.x + "px";
+                dom.style.top = player.y + "px";
+                dom.style.background = colors[Math.floor(Math.random() * colors.length)];
+                dom.innerText = `Player ${sessionId}`;
 
-                // listen to patches coming from the server
-                room.state.players.onAdd(function (player, sessionId) {
-                    var dom = document.createElement("div");
-                    dom.className = "player";
-                    dom.style.left = "0px";
-                    dom.style.top = "0px";
-                    dom.style.background = colors[Math.floor(Math.random() * colors.length)];
-                    dom.innerText = `${player.name || "[no name]"} (${sessionId})`;
+                // HP 바 컨테이너 생성
+                const hpBarContainer = document.createElement("div");
+                hpBarContainer.className = "hp-bar-container";
+                dom.appendChild(hpBarContainer);
 
-                    players[sessionId] = dom;
-                    document.body.appendChild(dom);
-                });
+                // HP 바 생성
+                const hpBar = document.createElement("div");
+                hpBar.className = "hp-bar";
+                hpBar.style.backgroundColor = dom.style.background; // 플레이어 색과 동일
+                hpBar.style.width = "100%"; // 초기 HP 100%
+                hpBarContainer.appendChild(hpBar);
 
-                room.state.players.onRemove(function (player, sessionId) {
-                    document.body.removeChild(players[sessionId]);
-                    delete players[sessionId];
-                });
+                // 식칼 DOM 추가
+                const knifeDom = document.createElement("img");
+                knifeDom.className = "img";
+                knifeDom.id = `knife-${sessionId}`;
+                knifeDom.src = "knife.png"; // 이미지 경로 설정
+                knifeDom.style.position = "absolute";
+                knifeDom.style.width = "30px";
+                knifeDom.style.display = "none"; // 초기에는 보이지 않음
+                knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
+                document.body.appendChild(knifeDom);
 
-                window.addEventListener("keydown", function (e) {
-                    if (e.which === 38) {
-                        up();
+                // 플레이어 업데이트
+                player.onChange(function (changes) {
+                    // 플레이어 위치
+                    dom.style.left = player.x + "px";
+                    dom.style.top = player.y + "px";
 
-                    } else if (e.which === 39) {
-                        right();
+                    // HP 바 업데이트
+                    const hpPercentage = Math.max(player.hp, 0) + "%";
+                    hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
 
-                    } else if (e.which === 40) {
-                        down();
-
-                    } else if (e.which === 37) {
-                        left();
+                    // 플레이어 Knife
+                    if (player.knifeActive) {
+                        knifeDom.style.left = `${player.knifeX}px`;
+                        knifeDom.style.top = `${player.knifeY}px`;
+                        knifeDom.style.display = "block";
+                    } else {
+                        knifeDom.style.display = "none";
                     }
                 });
 
+                players[sessionId] = dom;
+                document.body.appendChild(dom);
+
             });
-        }
 
-        function leave() {
-            if (room) {
-                room.leave();
-            }
-        }
+            // 플레이어 제거
+            room.state.players.onRemove(function (player, sessionId) {
+                document.body.removeChild(players[sessionId]);
+                delete players[sessionId];
+            });
 
-        function local_move(sessionId, movement) {
-            var dom = players[sessionId];
-            if (movement.x) {
-                dom.style.left = parseInt(dom.style.left) + movement.x + "px";
-            }
-            if (movement.y) {
-                dom.style.top = parseInt(dom.style.top) + movement.y + "px";
-            }
-        }
+            // 서버 메시지 핸들링 (?)
+            room.onMessage("hello", (message) => {
+                console.log(message);
+            });
 
-        function up () {
-            var movement = { y: -10 };
+            // 키보드 입력 감지
+            let canThrowKnife = true; // 쿨타임 상태를 추적하는 변수
+            const knifeCooldown = 2000; // 쿨타임 시간 (밀리초)
+            window.addEventListener("keydown", function (e) {
+                if (e.key === 'q' && canThrowKnife) {
+                    room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
+                    canThrowKnife = false; // 쿨타임 시작
+                    setTimeout(() => {
+                        canThrowKnife = true; // 쿨타임 종료
+                    }, knifeCooldown);
+                }
+            });
 
-            // move locally instantly
-            local_move(room.sessionId, movement);
+            // 마우스 위치 찾기
+            window.addEventListener("mousemove", function (e) {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
 
-            room.send("move", movement);
-        }
+            // 우클릭 이벤트 처리
+            window.addEventListener("contextmenu", function (e) {
+                e.preventDefault(); // 기본 컨텍스트 메뉴 방지
 
-        function right () {
-            var movement = { x: 10 };
+                // 클릭한 위치의 좌표를 계산
+                const x = e.clientX;
+                const y = e.clientY;
 
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
-
-        function down () {
-            var movement = { y: 10 };
-
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
-
-        function left () {
-            var movement = { x: -10 };
-
-            // move locally instantly
-            local_move(room.sessionId, movement);
-
-            room.send("move", movement);
-        }
+                // 서버로 목표 위치 전송
+                room.send("moveTo", { x: x, y: y });
+            });
+        });
 
     </script>
-
   </body>
 </html>

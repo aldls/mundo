@@ -5,6 +5,7 @@ import { auth } from "@colyseus/auth";
 import path from 'path';
 import serveIndex from 'serve-index';
 import express from 'express';
+import { Client } from "colyseus";
 
 // import { uWebSocketsTransport} from "@colyseus/uwebsockets-transport";
 import "./config/auth";
@@ -27,11 +28,11 @@ export default config({
         gameServer.define("lobby", LobbyRoom);
 
         // Define "relay" room
-        gameServer.define("relay", RelayRoom, { maxClients: 4 })
+        gameServer.define("relay", StateHandlerRoom, { maxClients: 4 })
             .enableRealtimeListing();
 
         // Define "chat" room
-        gameServer.define("chat", ChatRoom)
+        gameServer.define("chat", StateHandlerRoom)
             .enableRealtimeListing();
 
         // Register ChatRoom with initial options, as "chat_with_options"
@@ -45,11 +46,11 @@ export default config({
             .enableRealtimeListing();
 
         // Define "auth" room
-        gameServer.define("auth", AuthRoom)
+        gameServer.define("auth", StateHandlerRoom)
             .enableRealtimeListing();
 
         // Define "reconnection" room
-        gameServer.define("reconnection", ReconnectionRoom)
+        gameServer.define("reconnection", StateHandlerRoom)
             .enableRealtimeListing();
 
         // Define "custom_lobby" room
@@ -58,7 +59,6 @@ export default config({
         gameServer.onShutdown(function(){
             console.log(`game server is going down.`);
         });
-
 
     },
 
@@ -83,3 +83,21 @@ export default config({
          */
     }
 });
+
+async function joinOrCreateRoom() {
+    const roomNameInput = document.getElementById("roomName") as HTMLInputElement;
+    const roomName = roomNameInput.value.trim();
+  
+    if (!roomName) {
+      alert("Please enter a room name.");
+      return;
+    }
+  
+    try {
+      const room = await client.joinOrCreate(roomName);  // 입력받은 방 이름 사용
+      alert(`Joined or created room: ${room.id}`);
+      console.log(`Joined or created room with ID: ${room.id}`);
+    } catch (error) {
+      console.error("Error joining or creating room:", error);
+    }
+  }

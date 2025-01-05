@@ -30,6 +30,10 @@ export class Player extends Schema {
      // 기본 HP 100
     @type("number")
     hp: number = 100;
+
+    // 이기면 true
+    @type("number")
+    victoryNum: number = 0;
 }
 
 // State 클래스
@@ -65,7 +69,6 @@ export class State extends Schema {
     // 플레이어의 위치를 목표 위치로 이동시키는 메서드
     updatePlayers() {
         const speed = 5; // 플레이어의 이동 속도 (픽셀 단위)
-
         this.players.forEach(player => {
             const dx = player.targetX - player.x;
             const dy = player.targetY - player.y;
@@ -157,6 +160,32 @@ export class State extends Schema {
             }, 16);
         }
     }    
+    // 게임 끝났을 때 승리, 패배 화면 보여주기
+    showFinishScene(sessionId: string) {
+        console.log("??????????????");
+        const player = this.players.get(sessionId);
+        if(!player) return;
+
+        let someoneDefeated = false;
+        let everyoneElseDefeated = true;
+
+        this.players.forEach((otherPlayer, otherSessionId) => {
+            if (otherSessionId !== sessionId && otherPlayer.hp <= 0) {
+                everyoneElseDefeated = false;
+            }
+            if (otherSessionId !== sessionId && otherPlayer.hp <= 0) {
+                someoneDefeated = true;
+            }
+        });
+
+        if (player.hp > 0 && someoneDefeated) {
+            player.victoryNum = 1; // Player wins
+            console.log(player.victoryNum);
+        } else if (player.hp <= 0) {
+            player.victoryNum = 2; // Player loses
+            console.log(player.victoryNum);
+        }
+    }
 }
 
 // StateHandlerRoom 클래스: Colyseus의 Room을 상속받아 방의 동작을 정의.
@@ -188,6 +217,11 @@ export class StateHandlerRoom extends Room<State> {
         this.setSimulationInterval((deltaTime) => {
             this.state.updatePlayers();
         }, 16); // 16ms는 약 60 FPS에 해당
+
+        this.onMessage("finishScene", (client) => {
+            console.log("Finish game", client.sessionId);
+            this.state.showFinishScene(client.sessionId);
+        })
     }
 
     // onAuth(client, options, req) {

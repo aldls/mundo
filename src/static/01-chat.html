@@ -15,6 +15,14 @@
         top: 0;
         transform: translate(-50%, -50%); /* 중앙 정렬 */
       }
+      .userid {
+        position: absolute;
+        width: 100px;
+        height: 10px;
+        background-color: transparent; /* HP 바의 배경 (깎인 부분) */
+        /* border: 1px solid #333; 테두리 */
+        top: -15px; /* 캐릭터 위에 위치하도록 조정 */
+      }
       .hp-bar-container {
         position: absolute;
         width: 100px;
@@ -96,7 +104,7 @@
         document.body.style.backgroundSize = "100vw 100vh"; // 뷰포트 기준 크기 고정
         document.body.style.backgroundRepeat = "no-repeat";
         
-        //게임 실행하며 그 전 요소들 지우기기
+        //게임 실행하며 그 전 요소들 지우기
         const createButton = document.getElementById("createButton");
         const joinButton = document.getElementById("joinButton");
         const roomIdInput = document.getElementById("roomIdInput");
@@ -121,8 +129,21 @@
           dom.className = "player";
           dom.style.left = player.x + "px";
           dom.style.top = player.y + "px";
-          dom.style.background = colors[Math.floor(Math.random() * colors.length)];
-          dom.innerText = `Player ${sessionId}`;
+          // dom.style.background = colors[Math.floor(Math.random() * colors.length)];
+          dom.style.backgroundColor = "transparent";
+          dom.style.backgroundImage = "url('mundoface.png')";
+          dom.style.backgroundSize = "cover";
+          dom.style.backgroundRepeat = "no-repeat";
+          dom.style.backgroundPosition = "center";
+          // dom.innerText = `Player ${sessionId}`;
+
+          const userid = document.createElement("div");
+          userid.innerText = `Player ${sessionId}`;
+          userid.style.textAlign = "center"; // 텍스트 중앙 정렬
+          userid.style.marginTop = "60px";    // 이미지 아래 여백
+          userid.style.color = "white";      // 텍스트 색상 변경
+          dom.appendChild(userid);           // div 안에 텍스트 추가
+
 
           // HP 바 컨테이너 생성
           const hpBarContainer = document.createElement("div");
@@ -132,7 +153,9 @@
           // HP 바 생성
           const hpBar = document.createElement("div");
           hpBar.className = "hp-bar";
-          hpBar.style.backgroundColor = dom.style.background; // 플레이어 색과 동일
+          // hpBar.style.backgroundColor = dom.style.background; // 플레이어 색과 동일
+          hpBar.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          // 나중에 화면마다 색 동일하도록 바꾸기기
           hpBar.style.width = "100%"; // 초기 HP 100%
           hpBarContainer.appendChild(hpBar);
 
@@ -140,9 +163,9 @@
           const knifeDom = document.createElement("img");
           knifeDom.className = "img";
           knifeDom.id = `knife-${sessionId}`;
-          knifeDom.src = "knife.png"; // 이미지 경로 설정
+          knifeDom.src = "bonesaw.png"; // 이미지 경로 설정
           knifeDom.style.position = "absolute";
-          knifeDom.style.width = "30px";
+          knifeDom.style.width = "60px";
           knifeDom.style.display = "none"; // 초기에는 보이지 않음
           knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
           document.body.appendChild(knifeDom);
@@ -201,6 +224,50 @@
             // HP 바 업데이트
             const hpPercentage = Math.max(player.hp, 0) + "%";
             hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
+            
+
+            // player별로 다른 화면을 띄우기 위해(한쪽의 hp 끝났을 떄)
+            // const allPlayers = room.state.players;
+            // let otherPlayerHp = null;
+
+            // allPlayers.forEach((otherPlayer, otherSessionId)=> {
+            //   if(otherSessionId !== sessionId) {
+            //       otherPlayerHp = otherPlayer.hp;
+            //   }
+            // });
+
+            // hp끝나면 화면 종료
+            if (player.victoryNum === 1) {
+              cancelAnimationFrame(animate);
+  
+              // 승리 화면 띄우기
+              const victoryVideo = document.createElement("img");
+              victoryVideo.src = "victory.gif"; 
+              victoryVideo.style.position = "fixed";
+              victoryVideo.style.top = "50%";
+              victoryVideo.style.left = "50%";
+              victoryVideo.style.transform = "translate(-50%, -50%)";
+              victoryVideo.style.width = "80%";
+              victoryVideo.style.zIndex = "1000";
+              document.body.appendChild(victoryVideo);
+            } 
+            else if(player.victoryNum === 2){
+              cancelAnimationFrame(animate);
+
+              // 패배 화면 띄우기
+              const defeatVideo = document.createElement("img");
+              defeatVideo.src = "defeat1.gif";
+              defeatVideo.style.position = "fixed";
+              defeatVideo.style.top = "50%";
+              defeatVideo.style.left = "50%";
+              defeatVideo.style.transform = "translate(-50%, -50%)";
+              defeatVideo.style.width = "80%";
+              defeatVideo.style.zIndex = "1000";
+              document.body.appendChild(defeatVideo);
+            }
+            {
+              console.log("왜 안되냐고고");
+            }
 
             // 플레이어 Knife 상태 업데이트
             if (player.knifeActive) {
@@ -210,6 +277,7 @@
             } else {
               knifeDom.style.display = "none";
             }
+
           });
 
           players[sessionId] = dom;

@@ -4,6 +4,9 @@ import { Schema, type, MapSchema } from "@colyseus/schema";
 
 // 플레이어 및 상태 정의
 export class Player extends Schema {
+    @type("string")
+    nickname: string = "익명"; // 기본 닉네임
+
     @type("number")
     x = Math.floor(Math.random() * 400);
 
@@ -98,6 +101,8 @@ export class State extends Schema {
             const dy = knifeData.targetY - player.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
     
+            if (distance === 0) return; // Avoid division by zero
+
             const unitX = dx / distance;
             const unitY = dy / distance;
     
@@ -192,6 +197,10 @@ export class State extends Schema {
 // maxClients: 방에 최대 4명의 클라이언트가 접속할 수 있도록 설정.
 export class StateHandlerRoom extends Room<State> {
     maxClients = 4;
+    autoDispose = false;
+
+    private disposeTimeout: NodeJS.Timeout | null = null;
+    private disposeDelay: number = 10000; // 10초
 
     // 메서드:
     // onCreate: 방이 생성될 때 호출. 초기 상태를 설정하고, "move" 메시지를 처리하는 핸들러를 등록.
@@ -229,16 +238,34 @@ export class StateHandlerRoom extends Room<State> {
     // }
 
     // onJoin: 클라이언트가 방에 참여할 때 호출. 플레이어를 상태에 추가하고 로그를 출력.
-    onJoin (client: Client) {
-        // client.send("hello", "world");
-        console.log(client.sessionId, "joined!");
-        this.state.createPlayer(client.sessionId);
+    onJoin(client: Client, options: any) {
+        console.log(client.sessionId, "joined with nickname:", options.nickname || "익명");
+        const player = new Player();
+        player.nickname = options.nickname || "익명"; // 닉네임 설정
+        this.state.players.set(client.sessionId, player);
+
+        // 새 클라이언트가 참여하면 폐기 타이머를 취소
+        if (this.disposeTimeout) {
+            console.log("New client joined. Canceling dispose timeout...");
+            clearTimeout(this.disposeTimeout);
+            this.disposeTimeout = null;
+        }
     }
 
     // onLeave: 클라이언트가 방을 떠날 때 호출. 플레이어를 상태에서 제거하고 로그를 출력.
     onLeave (client) {
         console.log(client.sessionId, "left!");
         this.state.removePlayer(client.sessionId);
+
+        if (this.clients.length === 0) {
+            console.log("No clients left. Starting dispose timeout...");
+    
+            // 10초 후 방을 폐기하는 타이머 설정
+            this.disposeTimeout = setTimeout(() => {
+                console.log("Room is empty for 10 seconds. Disposing room...");
+                this.disconnect(); // 방 폐기
+            }, this.disposeDelay);
+        }
     }
 
     // onDispose: 방이 폐기될 때 호출. 로그를 출력.

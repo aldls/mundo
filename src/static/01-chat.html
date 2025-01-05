@@ -65,7 +65,9 @@
     <!-- <div id="roomInfo"></div> -->
 
     <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+    <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
     <script>
+      // 서버와의 연결 설정
       // 서버와의 연결 설정
       var host = window.document.location.host.replace(/:.*/, '');
       var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));

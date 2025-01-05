@@ -4,133 +4,336 @@
     <meta name="viewport" content="width=device-width" />
 
     <style>
-      body { font-family: Tahoma, Geneva, sans-serif; }
-    </style>
-
-    <!-- colyseus.js client -->
-    <script type="text/javascript" src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
-
-  </head>
-  <body>
-    <h1>
-      <a href="https://github.com/colyseus/colyseus-examples"><img src="https://cdn.jsdelivr.net/gh/colyseus/colyseus@master/media/header.png" height="100" alt="colyseus" /></a>
-    </h1>
-
-    <p>This example shows how to use a custom <code>LobbyRoom</code>:</p>
-    <ul>
-        <li>The same as <a href="05-lobby-room.html">05-lobby-room.html</a> (<a href="https://docs.colyseus.io/builtin-rooms/lobby/">See documentation</a>)</li>
-        <li>Uses a room that extends LobbyRoom, and use a custom state.</li>
-    </ul>
-
-    <p>Open Developer Tools for log messages.</p>
-
-    <p><strong>Commands</strong></p>
-
-    <button onclick="joinLobby()">join lobby</button>
-    <button onclick="leaveLobby()">leave lobby</button>
-
-    <h2>All rooms:</h2>
-    <ul id="all_rooms"></ul>
-
-    <h1>Join or Create a Game Room</h1>
-
-    <input type="text" id="roomName" placeholder="Enter Room Name">
-
-    <button onclick="join()" id="joinButton">Join Room </button>
-    <button onclick="create()" id="createButton">Create Room</button>
-
-    <script>
-      var host = window.document.location.host.replace(/:.*/, '');
-      var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
-      var lobby;
-      var room;
-
-      function joinLobby () {
-        // Logged into your app and Facebook.
-        client.joinOrCreate("custom_lobby").then(room_instance => {
-            lobby = room_instance;
-            console.log(lobby.serializer);
-            onjoin();
-            console.log("Joined lobby room!");
-
-        }).catch(e => {
-            console.error("Error", e);
-        });
+      body {
+        font-family: Tahoma, Geneva, sans-serif;
+        background-image: url('background_lobby.jpg');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+        margin: 0;
+        padding: 0;
+        color: #ffffff;
       }
 
-      function join() {
-        var RoomName = document.getElementById("roomName").value;
-        console.log(RoomName);
-        client.joinById(RoomName).then(room_instance => {
-          room = room_instance;
-          console.log(room.serializer);
-        });
+      .overlay {
+        background-color: rgba(0, 0, 0, 0.6);
+        min-height: 100vh;
+        padding: 20px;
+        position: relative;
       }
 
-      function create(){
-        var RoomName = document.getElementById("createButton").value;
-        console.log("RoomName");
-        client.create("RoomName").then(room_instance =>{
-          room = room_instance;
-          console.log(room.serializer);
-        });
+      h1 {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 32px;
       }
 
-      function onjoin() {
-          lobby.onStateChange((state) => {
-              console.log("Custom lobby state:", state);
-          })
-
-          lobby.onMessage("rooms", (rooms) => {
-              allRooms = rooms;
-              update_full_list();
-
-              console.log("Received full list of rooms:", allRooms);
-          });
-
-          lobby.onMessage("+", ([roomId, room]) => {
-              const roomIndex = allRooms.findIndex((room) => room.roomId === roomId);
-              if (roomIndex !== -1) {
-                  console.log("Room update:", room);
-                  allRooms[roomIndex] = room;
-
-              } else {
-                  console.log("New room", room);
-                  allRooms.push(room);
-              }
-              update_full_list();
-          });
-
-          lobby.onMessage("-", (roomId) => {
-              console.log("Room removed", roomId);
-              allRooms = allRooms.filter((room) => room.roomId !== roomId);
-              update_full_list();
-          });
-
-          lobby.onLeave(() => {
-              allRooms = [];
-              update_full_list();
-              console.log("Bye, bye!");
-          });
-      }
-      // 화면에서 list 띄우는 부분
-      function update_full_list() {
-        var el = document.getElementById('all_rooms');
-        el.innerHTML = allRooms.map(function(room) {
-            return "<li><code>" + "name: " + room.name + ", " + "member: " + room.clients + "</code></li>";
-        }).join("\n");
-
+      .buttons {
+        text-align: center;
+        margin-top: 10px;
       }
 
-      function leaveLobby() {
-        if (lobby) {
-          lobby.leave();
+      .home-button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 200px;
+        height: 80px;
+        max-width: 500px;
+        max-height: 500px;
+        background-image: url('home_button.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+      }
 
-        } else {
-          console.warn("Not connected.");
+      .search-container {
+        text-align: center;
+        margin: 20px 0;
+        position: relative;
+      }
+
+      .search-container input {
+        width: 70%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 2px solid gold;
+        background-color: black;
+        color: white;
+        font-size: 16px;
+      }
+
+      .search-container button {
+        width: 70px;
+        height: 50px;
+        margin-left: 10px;
+        background-image: url('refresh2.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .divider {
+        margin: 20px 0;
+        border-bottom: 1px solid #ffffff;
+      }
+
+      .rooms-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 20px;
+        border-radius: 10px;
+      }
+
+      .room-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #ffffff;
+      }
+
+      .room-item:last-child {
+        border-bottom: none;
+      }
+
+      .room-details {
+        flex: 1;
+      }
+
+      .room-name {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      .room-info {
+        font-size: 14px;
+      }
+
+      .join-button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .join-button:hover {
+        background-color: #0069d9;
+      }
+
+      .message {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 16px;
+      }
+
+      .nickname-container {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+
+      .nickname-container input {
+        width: 70%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 2px solid gold;
+        background-color: black;
+        color: white;
+        font-size: 16px;
+      }
+
+      .create-room-button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #28a745;
+        color: white;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .create-room-button:hover {
+        background-color: #218838;
+      }
+
+      @media (max-width: 600px) {
+        .room-item {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .join-button {
+          margin-top: 10px;
+          width: 100%;
         }
       }
-    </script>
+    </style>
 
+    <script type="text/javascript" src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+  </head>
+  <body>
+    <div class="overlay">
+      <button class="home-button" onclick="leave()"></button>
+
+      <h1>사용자 설정 게임 로비</h1>
+
+      <div class="search-container">
+        <input type="text" id="search" placeholder="로비 이름 검색" />
+        <button onclick="refreshRooms()"></button>
+      </div>
+
+      <div class="nickname-container">
+        <input type="text" id="nickname" placeholder="닉네임 입력" />
+      </div>
+
+      <!-- **Create Room 버튼 추가** -->
+      <button class="create-room-button" onclick="createRoom()">Create Room</button>
+
+      <div class="divider"></div>
+
+      <div id="all_rooms" class="rooms-container"></div>
+      <div id="message" class="message"></div>
+
+      <script>
+        var host = window.document.location.host.replace(/:.*/, '');
+        var client = new Colyseus.Client(
+          location.protocol.replace("http", "ws") +
+            "//" +
+            host +
+            (location.port ? ':' + location.port : '')
+        );
+        var lobby;
+        var allRooms = [];
+
+        window.onload = function () {
+          join();
+        };
+
+        function join() {
+          client.joinOrCreate("custom_lobby")
+            .then((room_instance) => {
+              lobby = room_instance;
+              console.log("로비에 참가했습니다!");
+              document.getElementById("message").innerText = "로비에 성공적으로 참가했습니다!";
+
+              lobby.onMessage("rooms", (rooms) => {
+                allRooms = rooms;
+                update_full_list();
+              });
+
+              lobby.onMessage("+", ([roomId, room]) => {
+                const roomIndex = allRooms.findIndex((r) => r.roomId === roomId);
+                if (roomIndex !== -1) {
+                  allRooms[roomIndex] = room;
+                } else {
+                  allRooms.push(room);
+                }
+                update_full_list();
+              });
+
+              lobby.onMessage("-", (roomId) => {
+                allRooms = allRooms.filter((room) => room.roomId !== roomId);
+                update_full_list();
+              });
+
+              lobby.onLeave(() => {
+                allRooms = [];
+                update_full_list();
+                document.getElementById("message").innerText = "로비를 떠났습니다.";
+              });
+            })
+            .catch((e) => {
+              console.error("에러", e);
+              document.getElementById("message").innerText = "로비 참가 중 에러가 발생했습니다.";
+            });
+        }
+
+        function update_full_list() {
+          var el = document.getElementById("all_rooms");
+          if (allRooms.length === 0) {
+            el.innerHTML = "<p style='text-align:center;'>사용 가능한 방이 없습니다.</p>";
+            return;
+          }
+
+          el.innerHTML = allRooms
+            .map(function (room) {
+              return `
+              <div class="room-item">
+                <div class="room-details">
+                  <div class="room-name">${room.name || "이름 없는 방"}</div>
+                  <div class="room-info">
+                    <span>ID: ${room.roomId}</span> |
+                    <span>플레이어: ${room.clients}/${
+                  room.maxClients || "N/A"
+                }</span>
+                  </div>
+                </div>
+                <button class="join-button" onclick="redirectToRoom('${
+                  room.roomId
+                }')">참가하기</button>
+              </div>`;
+            })
+            .join("\n");
+        }
+
+        // 특정 roomId로 리다이렉트
+        function redirectToRoom(roomId) {
+          const nickname = document.getElementById("nickname").value.trim() || "익명";
+          window.location.href = `06-relay-room.html?roomId=${roomId}&nickname=${encodeURIComponent(nickname)}`;
+        }
+
+        // **Create Room 함수 추가**
+        function createRoom() {
+          const nicknameInput = document.getElementById("nickname");
+          const nickname = nicknameInput.value.trim();
+
+          if (!nickname) {
+            alert("닉네임을 입력해주세요.");
+            nicknameInput.focus();
+            return;
+          }
+
+          client.create("state_handler", { nickname: nickname })
+            .then((room_instance) => {
+              console.log(`방을 생성했습니다: ${room_instance.id}`);
+              // 방 생성 후 게임 화면으로 리다이렉트
+              window.location.href = `06-relay-room.html?roomId=${room_instance.id}&nickname=${encodeURIComponent(nickname)}`;
+            })
+            .catch((e) => {
+              console.error("방 생성 실패:", e);
+              document.getElementById("message").innerText = "방 생성에 실패했습니다.";
+            });
+        }
+
+        function refreshRooms() {
+          document.getElementById("search").value = "";
+          update_full_list();
+        }
+
+        function leave() {
+          if (lobby) {
+            lobby.leave();
+            document.getElementById("message").innerText = "로비를 떠나는 중...";
+          } else {
+            document.getElementById("message").innerText = "로비에 연결되어 있지 않습니다.";
+          }
+        }
+      </script>
+    </div>
   </body>
 </html>

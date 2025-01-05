@@ -155,6 +155,21 @@
         font-size: 16px;
       }
 
+      .create-room-button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #28a745;
+        color: white;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .create-room-button:hover {
+        background-color: #218838;
+      }
 
       @media (max-width: 600px) {
         .room-item {
@@ -185,7 +200,10 @@
       <div class="nickname-container">
         <input type="text" id="nickname" placeholder="닉네임 입력" />
       </div>
-      
+
+      <!-- **Create Room 버튼 추가** -->
+      <button class="create-room-button" onclick="createRoom()">Create Room</button>
+
       <div class="divider"></div>
 
       <div id="all_rooms" class="rooms-container"></div>
@@ -193,7 +211,12 @@
 
       <script>
         var host = window.document.location.host.replace(/:.*/, '');
-        var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
+        var client = new Colyseus.Client(
+          location.protocol.replace("http", "ws") +
+            "//" +
+            host +
+            (location.port ? ':' + location.port : '')
+        );
         var lobby;
         var allRooms = [];
 
@@ -256,8 +279,8 @@
                   <div class="room-info">
                     <span>ID: ${room.roomId}</span> |
                     <span>플레이어: ${room.clients}/${
-                room.maxClients || "N/A"
-              }</span>
+                  room.maxClients || "N/A"
+                }</span>
                   </div>
                 </div>
                 <button class="join-button" onclick="redirectToRoom('${
@@ -271,9 +294,31 @@
         // 특정 roomId로 리다이렉트
         function redirectToRoom(roomId) {
           const nickname = document.getElementById("nickname").value.trim() || "익명";
-          window.location.href = `http://${host}:2567/06-relay-room.html?roomId=${roomId}&nickname=${encodeURIComponent(nickname)}`;
+          window.location.href = `06-relay-room.html?roomId=${roomId}&nickname=${encodeURIComponent(nickname)}`;
         }
 
+        // **Create Room 함수 추가**
+        function createRoom() {
+          const nicknameInput = document.getElementById("nickname");
+          const nickname = nicknameInput.value.trim();
+
+          if (!nickname) {
+            alert("닉네임을 입력해주세요.");
+            nicknameInput.focus();
+            return;
+          }
+
+          client.create("state_handler", { nickname: nickname })
+            .then((room_instance) => {
+              console.log(`방을 생성했습니다: ${room_instance.id}`);
+              // 방 생성 후 게임 화면으로 리다이렉트
+              window.location.href = `06-relay-room.html?roomId=${room_instance.id}&nickname=${encodeURIComponent(nickname)}`;
+            })
+            .catch((e) => {
+              console.error("방 생성 실패:", e);
+              document.getElementById("message").innerText = "방 생성에 실패했습니다.";
+            });
+        }
 
         function refreshRooms() {
           document.getElementById("search").value = "";

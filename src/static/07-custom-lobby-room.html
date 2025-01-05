@@ -294,7 +294,7 @@
         // 특정 roomId로 리다이렉트
         function redirectToRoom(roomId) {
           const nickname = document.getElementById("nickname").value.trim() || "익명";
-          window.location.href = `06-relay-room.html?roomId=${roomId}&nickname=${encodeURIComponent(nickname)}`;
+          window.location.href = `05-lobby-room.html?roomId=${roomId}&nickname=${encodeURIComponent(nickname)}`;
         }
 
         // **Create Room 함수 추가**
@@ -312,7 +312,7 @@
             .then((room_instance) => {
               console.log(`방을 생성했습니다: ${room_instance.id}`);
               // 방 생성 후 게임 화면으로 리다이렉트
-              window.location.href = `02-state-handler.html?roomId=${room_instance.id}&nickname=${encodeURIComponent(nickname)}`;
+              window.location.href = `05-lobby-room.html?roomId=${room_instance.id}&nickname=${encodeURIComponent(nickname)}`;
             })
             .catch((e) => {
               console.error("방 생성 실패:", e);

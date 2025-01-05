@@ -70,16 +70,17 @@
       // URL에서 roomId 추출
       const urlParams = new URLSearchParams(window.location.search);
       const roomId = urlParams.get('roomId');
+      const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
       let room;
 
       // 방에 참여하는 함수
       function joinRoom(roomId) {
         client
-          .joinById(roomId)
+          .joinById(roomId, { nickname })
           .then((room_instance) => {
             room = room_instance;
             document.getElementById('roomInfo').innerText = `방에 성공적으로 참여했습니다: ${room.id}`;
-            console.log(`방에 성공적으로 참여했습니다: ${room.id}`);
+            console.log(`닉네임: ${nickname}, 방에 성공적으로 참여했습니다: ${room.id}`);
             setupRoomHandlers();
           })
           .catch((e) => {
@@ -137,7 +138,7 @@
           dom.style.left = player.x + "px";
           dom.style.top = player.y + "px";
           dom.style.background = colors[Math.floor(Math.random() * colors.length)];
-          dom.innerText = `Player ${sessionId}`;
+          dom.innerText = `Player: ${player.nickname}`; // 닉네임 표시
 
           // HP 바 컨테이너 생성
           const hpBarContainer = document.createElement("div");

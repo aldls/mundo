@@ -4,6 +4,9 @@ import { Schema, type, MapSchema } from "@colyseus/schema";
 
 // 플레이어 및 상태 정의
 export class Player extends Schema {
+    @type("string")
+    nickname: string = "익명"; // 기본 닉네임
+
     @type("number")
     x = Math.floor(Math.random() * 400);
 
@@ -197,10 +200,11 @@ export class StateHandlerRoom extends Room<State> {
     // }
 
     // onJoin: 클라이언트가 방에 참여할 때 호출. 플레이어를 상태에 추가하고 로그를 출력.
-    onJoin (client: Client) {
-        // client.send("hello", "world");
-        console.log(client.sessionId, "joined!");
-        this.state.createPlayer(client.sessionId);
+    onJoin(client: Client, options: any) {
+        console.log(client.sessionId, "joined with nickname:", options.nickname || "익명");
+        const player = new Player();
+        player.nickname = options.nickname || "익명"; // 닉네임 설정
+        this.state.players.set(client.sessionId, player);
     }
 
     // onLeave: 클라이언트가 방을 떠날 때 호출. 플레이어를 상태에서 제거하고 로그를 출력.

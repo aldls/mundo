@@ -61,6 +61,9 @@ export class State extends Schema {
     @type("boolean")
     gameOver: boolean = false;
 
+    @type("number")
+    selectButton: number = 0;
+
     something = "This attribute won't be sent to the client-side";
 
     // 메서드
@@ -266,7 +269,13 @@ export class StateHandlerRoom extends Room<State> {
                 player.hp = 100;
                 player.victoryNum = 0;
             });
+            this.state.selectButton = 0;
             this.state.gameOver = false;
+        })
+
+        this.onMessage("buttonClicked", (client) =>{
+            console.log("Select button");
+            this.state.selectButton += 1;
         })
     }
 

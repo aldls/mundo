@@ -4,7 +4,125 @@
     <meta name="viewport" content="width=device-width" />
 
     <style>
-      body { font-family: Tahoma, Geneva, sans-serif; }
+      body {
+        margin: 0; 
+        padding: 0;
+        font-family: Tahoma, Geneva, sans-serif;
+        overflow: auto; /* loading.png가 화면보다 크면 스크롤 가능 */
+      }
+
+      /* ===== 로비 화면 (loading.png 그대로 표시, ProgressBar는 화면 하단 고정) ===== */
+      #lobbyContainer {
+        display: none; /* 초기에 감춰두고, JS에서 제어 */
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      /* loading.png 원본 크기로 그대로 표시 */
+      #lobbyImage {
+        display: block;
+        margin: 0 auto;
+      }
+
+      /* 바닥 고정 ProgressBar 영역 */
+      .progress-bar-wrapper {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 0px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      /* 하나의 막대가 0~100% 로 채워짐 (색 동일) */
+      #progressBar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0%; /* JS에서 애니메이션 */
+        background-color: #0FA697; 
+        transition: width 1s ease; /* 1초 동안 부드럽게 */
+      }
+      /* 가운데 % 표시 */
+      #progressText {
+        position: absolute;
+        width: 100%;
+        line-height: 30px;
+        text-align: center;
+        color: #0FA697;
+        top: 0;
+        left: 0;
+      }
+      .progress-bar-container {
+        position: relative;
+        width: 420px;
+        height: 5px;
+        background-color: #0B1C26;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        border: 2px solid #695840; /* 테두리 색상과 두께 설정 */
+      }
+
+      .progress-trapezoid {
+        position: absolute;
+        top: -25px;       /* bar-container의 위로 튀어나옴 */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 64px;      /* 테두리 때문에 크기 약간 키움 */
+        height: 24px;     /* 테두리 때문에 크기 약간 키움 */
+        background: #695840;             /* 테두리 색상 */
+        clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+
+        /* 내부 사다리꼴 */
+        position: relative;
+      }
+      .progress-trapezoid::after {
+        content: '';                       /* 가상 요소 */
+        position: absolute;
+        top: 2px;                          /* 테두리 두께 */
+        left: 2px;
+        right: 2px;
+        bottom: 2px;
+        background: #05131D;               /* 내부 사다리꼴 색상 */
+        clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%);
+        z-index: -1;                       /* 부모 위로 나오지 않도록 */
+      }
+
+
+      /* 상대방 들어왔을 때 보여줄 큰 profile.png */
+      #profileSection {
+        display: none;
+      }
+
+      /* ===== 카운트다운 화면 ===== */
+      #countdownContainer {
+        display: none; 
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        font-size: 3em;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* ===== 게임 화면 ===== */
+      #gameContainer {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image: url('game_background.png');
+        background-size: 100vw 100vh;
+        background-repeat: no-repeat;
+        overflow: hidden;
+      }
+
       .player {
         width: 100px;
         height: 100px;
@@ -90,24 +208,50 @@
         background-color: #007BFF;
         color: white;
       }
-      /* #roomInfo {
-        margin-top: 20px;
-      } */
+      /* 디버그용 (현재 방 정보) */
+      #roomInfo {
+        position: absolute;
+        top: 10px; 
+        left: 10px; 
+        color: #fff;
+        z-index: 99999;
+      }
     </style>
   </head>
   <body>
-    <strong id="roomInfo"></strong><br><br>
+    <!-- <strong id="roomI nfo"></strong><br><br> -->
+    <!-- 로비 화면 -->
+    <div id="lobbyContainer">
+      <img id="lobbyImage" src="loading.png" alt="loading">
+      <!-- 진행바 (맨 아래 고정) -->
+      <div class="progress-bar-wrapper">
+        <!-- 프로필 이미지 영역 -->
+        <div id="profileSection" style="display:none;">
+          <img src="profile.png" alt="profile">
+        </div>
+        
+        <!-- 그 다음 실제 progress bar -->
+        <div class="progress-bar-container">
+          <!-- 사다리꼴 (텍스트) 먼저 -->
+          <div class="progress-trapezoid">
+            <div id="progressText">0%</div>
+          </div>
+          <div id="progressBar"></div>
+        </div>
+        
+      </div>
+    </div>
 
-    <!-- **방 ID 입력 및 참여 인터페이스** -->
-    <!-- <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
-    <button id="joinButton">Join Room by ID</button> -->
+    <!-- 카운트다운 화면 -->
+    <div id="countdownContainer">
+      <div id="countdownText">3</div>
+    </div>
 
-    <!-- <br><br> -->
+    <!-- 게임 화면 -->
+    <div id="gameContainer"></div>
 
-    <!-- **방 생성 버튼 및 방 ID 표시** -->
-    <!-- **이 줄은 있어야함**  -->
-    <!-- <button id="createButton">Create New Room</button> -->
-    <!-- <div id="roomInfo"></div> -->
+    <!-- 현재 방 정보 표시 -->
+    <strong id="roomInfo"></strong>
 
     <!-- <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script> -->
     <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
@@ -126,21 +270,36 @@
       const roomId = urlParams.get('roomId');
       const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
       let room;
+      let oldPlayerCount = 0;   // 이전 인원 (0,1,2...)
+      let currentProgress = 0;  // 현재 진행(%) - 0→50→100
 
-      // 방에 참여하는 함수
+      // DOM 참조
+      const lobbyContainer = document.getElementById('lobbyContainer');
+      const lobbyImage = document.getElementById('lobbyImage');
+
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+      const profileSection = document.getElementById('profileSection');
+
+      const countdownContainer = document.getElementById('countdownContainer');
+      const countdownText = document.getElementById('countdownText');
+      const gameContainer = document.getElementById('gameContainer');
+      const roomInfo = document.getElementById('roomInfo');
+
+      // 페이지 로드 시 로비 화면 표시
+      lobbyContainer.style.display = "block";
+      countdownContainer.style.display = "none";
+
+      // 방 참여
       function joinRoom(roomId) {
-        client
-          .joinById(roomId, { nickname })
-          .then((room_instance) => {
-            room = room_instance;
-            document.getElementById('roomInfo').innerText = `방에 성공적으로 참여했습니다: ${room.id}`;
-            console.log(`닉네임: ${nickname}, 방에 성공적으로 참여했습니다: ${room.id}`);
-            setupRoomHandlers();
-          })
-          .catch((e) => {
-            console.error('방 참여 실패:', e);
-            alert('방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.');
-          });
+        client.joinById(roomId, { nickname }).then((room_instance) => {
+          room = room_instance;
+          roomInfo.textContent = `방 참여 성공: ${room.id}`;
+          setupRoomHandlers();
+        }).catch((err) => {
+          console.error(err);
+          alert("방 참여 실패");
+        });
       }
 
       // 페이지 로드 시 자동으로 방 참여
@@ -148,33 +307,33 @@
         joinRoom(roomId);
       } else {
         alert('유효한 Room ID가 필요합니다.');
-        console.error('URL에서 Room ID를 찾을 수 없습니다.');
+        // console.error('URL에서 Room ID를 찾을 수 없습니다.');
       }
 
-      // **방에 참여하는 함수**
-      function joinRoomById(roomId) {
-        client.joinById(roomId).then(room_instance => {
-          room = room_instance;
-          console.log(`방에 성공적으로 참여했습니다: ${room.id}`);
-          setupRoomHandlers();
-        }).catch(e => {
-          console.error("방 참여 실패:", e);
-          alert("방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.");
-        });
-      }
+      // // **방에 참여하는 함수**
+      // function joinRoomById(roomId) {
+      //   client.joinById(roomId).then(room_instance => {
+      //     room = room_instance;
+      //     console.log(`방에 성공적으로 참여했습니다: ${room.id}`);
+      //     setupRoomHandlers();
+      //   }).catch(e => {
+      //     console.error("방 참여 실패:", e);
+      //     alert("방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.");
+      //   });
+      // }
 
-      // **새로운 방을 생성하는 함수**
-      function createNewRoom() {
-        client.create("state_handler").then(room_instance => {
-          room = room_instance;
-          console.log(`새로운 방을 생성했습니다: ${room.id}`);
-          document.getElementById("roomInfo").innerText = `방 ID: ${room.id} (공유하여 다른 사용자가 참여할 수 있습니다.)`;
-          setupRoomHandlers();
-        }).catch(e => {
-          console.error("방 생성 실패:", e);
-          alert("방 생성에 실패했습니다.");
-        });
-      }
+      // // **새로운 방을 생성하는 함수**
+      // function createNewRoom() {
+      //   client.create("state_handler").then(room_instance => {
+      //     room = room_instance;
+      //     console.log(`새로운 방을 생성했습니다: ${room.id}`);
+      //     document.getElementById("roomInfo").innerText = `방 ID: ${room.id} (공유하여 다른 사용자가 참여할 수 있습니다.)`;
+      //     setupRoomHandlers();
+      //   }).catch(e => {
+      //     console.error("방 생성 실패:", e);
+      //     alert("방 생성에 실패했습니다.");
+      //   });
+      // }
 
       // **방 핸들러 설정 함수**
       function setupRoomHandlers() {
@@ -182,7 +341,13 @@
         document.body.style.backgroundImage = "url('game_background.png')";
         document.body.style.backgroundSize = "100vw 100vh"; // 뷰포트 기준 크기 고정
         document.body.style.backgroundRepeat = "no-repeat";
-        
+
+        // 1) 서버에서 "playerCount" 메시지를 받으면 -> 진행바 애니메이션
+        room.onMessage("playerCount", (message) => {
+          const newCount = message.count;
+          updateProgress(newCount);
+        });
+
 
         // 플레이어 관리
         var players = {};
@@ -280,7 +445,7 @@
               if (Math.abs(player.x - currentX) > 0.1 || Math.abs(player.y - currentY) > 0.1) {
                   requestAnimationFrame(animate); // 계속 애니메이션 실행
               }
-          }
+            }
 
           // 창 크기 변경 시 동적으로 범위가 업데이트되도록 이벤트 리스너 추가
           window.addEventListener('resize', animate);
@@ -319,8 +484,11 @@
               restartButton.innerText = "Play Again";
               restartButton.className = "restart-button";
               restartButton.onclick = () => {
-                room.send("restartGame"); //서버도 리셋셋
-                location.reload(); // 페이지 새로고침으로 게임 재시작
+                room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
+                if(room.state.selectButton === 2){
+                  room.send("restartGame"); //서버도 리셋
+                  location.reload(); // 페이지 새로고침으로 게임 재시작
+                }
               };
               buttonContainer.appendChild(restartButton);
 
@@ -328,6 +496,7 @@
               lobbyButton.innerText = "Back Lobby";
               lobbyButton.className = "lobby-button";
               lobbyButton.onclick = () => {
+                room.send("buttonClicked"); //양쪽 다 선택했는지 확인인
                 window.location.href = "/07-custom-lobby-room.html";
               };
               buttonContainer.appendChild(lobbyButton);
@@ -353,8 +522,11 @@
               restartButton.innerText = "Play Again";
               restartButton.className = "restart-button";
               restartButton.onclick = () => {
-                room.send("restartGame"); //서버도 리셋셋
-                location.reload(); // 페이지 새로고침으로 게임 재시작
+                room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
+                if(room.state.selectButton === 2){
+                  room.send("restartGame"); //서버도 리셋
+                  location.reload(); // 페이지 새로고침으로 게임 재시작
+                }
               };
               buttonContainer.appendChild(restartButton);
 
@@ -362,6 +534,7 @@
               lobbyButton.innerText = "Back Lobby";
               lobbyButton.className = "lobby-button";
               lobbyButton.onclick = () => {
+                room.send("buttonClicked"); //양쪽 다 선택했는지 확인인
                 window.location.href = "/07-custom-lobby-room.html";
               };
               buttonContainer.appendChild(lobbyButton);
@@ -403,9 +576,7 @@
           if (e.key === 'q' && canThrowKnife) {
             room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
             canThrowKnife = false; // 쿨타임 시작
-            setTimeout(() => {
-              canThrowKnife = true; // 쿨타임 종료
-            }, knifeCooldown);
+            setTimeout(() => { canThrowKnife = true; }, knifeCooldown);
           }
         });
 
@@ -415,20 +586,89 @@
           mouseY = e.clientY;
         });
 
-        // 우클릭 이벤트 처리 (이동 명령)
-        window.addEventListener("contextmenu", function (e) {
-          if(room.state.gameOver) return;
-          e.preventDefault(); // 기본 컨텍스트 메뉴 방지
-
-          // 클릭한 위치의 좌표 계산
-          const x = e.clientX;
-          const y = e.clientY;
-
-          // 서버로 목표 위치 전송
-          room.send("moveTo", { x: x, y: y });
+        // 우클릭 이동
+        window.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          room.send("moveTo", { x: e.clientX, y: e.clientY });
         });
+
+        // ================================
+      // 진행바 & 카운트다운 로직
+      // ================================
+      function updateProgress(newCount) {
+        // 기존 인원 oldPlayerCount(0~2), 새 인원 newCount
+        // 1명 -> 50%, 2명 -> 100%
+        let targetProgress = 0;
+        if (newCount === 1) {
+          targetProgress = 50;
+        } else if (newCount >= 2) {
+          // 2명 이상 -> 100%
+          profileSection.style.display = "block";
+          targetProgress = 100;
+        }
+
+        animateProgress(currentProgress, targetProgress, () => {
+          // 애니메이션 끝난 뒤 콜백
+          currentProgress = targetProgress;
+
+          // 2명이 된 후 => 100%라면 => 카운트다운 시작 (모두가 동일하게)
+          if (currentProgress === 100) {
+            // profile 표시
+            // 약간 딜레이 주고 카운트다운
+            setTimeout(() => { startCountdown(); }, 500);
+          }
+        });
+
+        oldPlayerCount = newCount;
       }
 
+      // 0→50 또는 50→100 으로 1초간 애니메이션
+      function animateProgress(fromValue, toValue, onComplete) {
+        let start = fromValue;
+        const distance = toValue - fromValue;
+        const duration = 1000; // 1초
+        const startTime = performance.now();
+
+        function tick(now) {
+          const elapsed = now - startTime;
+          const ratio = Math.min(elapsed / duration, 1);
+          const newVal = start + distance * ratio;
+
+          // 실제 반영
+          progressBar.style.width = newVal + "%";
+          progressText.textContent = Math.floor(newVal) + "%";
+
+          if (ratio < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            // 완료
+            if (onComplete) onComplete();
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+
+      // 카운트다운
+      function startCountdown() {
+        // 로비 감추고
+        lobbyContainer.style.display = "none";
+        // 카운트다운 노출
+        countdownContainer.style.display = "flex";
+
+        let count = 3;
+        countdownText.textContent = count;
+        const timer = setInterval(() => {
+          count--;
+          countdownText.textContent = count;
+          if (count <= 0) {
+            clearInterval(timer);
+            countdownContainer.style.display = "none";
+            // 게임 시작
+            gameContainer.style.display = "block";
+          }
+        }, 1000);
+      }
+    }
     </script>
   </body>
 </html>

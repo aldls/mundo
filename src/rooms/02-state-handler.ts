@@ -251,6 +251,21 @@ export class StateHandlerRoom extends Room<State> {
             console.log("Finish game", client.sessionId);
             this.state.showFinishScene(client.sessionId);
         })
+
+        // Chatting
+        this.onMessage("chat", (client, text: string) => {
+            // 현재 플레이어 정보
+            const player = this.state.players.get(client.sessionId);
+            const nickname = player ? player.nickname : "익명";
+
+            // 모든 클라이언트에게 broadcast
+            this.broadcast("chat", {
+                sessionId: client.sessionId,
+                nickname: nickname,
+                text: text,
+            });
+        });
+
     }
 
     // onAuth(client, options, req) {
@@ -307,7 +322,7 @@ export class StateHandlerRoom extends Room<State> {
 
         const count = this.clients.length;
         this.broadcast("playerCount", { count });
-        
+
         if (this.clients.length === 0) {
             console.log("No clients left. Starting dispose timeout...");
     

@@ -162,6 +162,74 @@
         color: #fff;
         z-index: 99999;
       }
+
+      /* 채팅 관련련 */
+      ::-webkit-scrollbar {
+        width: 12px; /* 스크롤바 너비 */
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background-color: #795C26; /* 스크롤바 색상 */
+        border-radius: 6px; /* 스크롤바 끝 모양 */
+        border: 3px solid transparent; /* 안쪽 여백 효과 */
+        background-clip: padding-box; /* 배경 잘림 방지 */
+      }
+
+      ::-webkit-scrollbar-track {
+        background-color: rgba(0, 0, 0, 0.3); /* 트랙 색상 */
+        border-radius: 6px;
+      }
+
+
+      #chatContainer {
+        position: absolute; 
+        left: 10px;
+        bottom: 10px; 
+        width: 300px;
+        margin-bottom: 300px;
+        max-height: 200px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #chatLog {
+        flex: 1; 
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end; /* 최근 메시지를 아래쪽에 위치시킴 */
+      }
+
+      .chat-message {
+        margin: 2px 0;
+        line-height: 1.2em;
+        font-size: 14px;
+      }
+
+      .nickname {
+        font-weight: bold;
+        margin-right: 4px;
+      }
+      .my-nickname {
+        color: #41AED9;
+      }
+      .other-nickname {
+        color: #D93636;
+      }
+      .chat-text {
+        color: white;
+      }
+
+      #chatInput {
+        display: none;       /* 처음엔 숨김. Enter키로 열기 */
+        border: 1px solid #666;
+        color: white;
+        background: rgba(0,0,0,0.7);
+        padding: 4px;
+        font-size: 14px;
+        outline: none;
+      }
+      
     </style>
   </head>
   <body>
@@ -183,7 +251,7 @@
           </div>
           <div id="progressBar"></div>
         </div>
-        
+
       </div>
     </div>
 
@@ -193,7 +261,13 @@
     </div>
 
     <!-- 게임 화면 -->
-    <div id="gameContainer"></div>
+    <div id="gameContainer">
+      <!-- 아래는 추가된 코드 (채팅 영역) -->
+      <div id="chatContainer">
+        <div id="chatLog"></div>
+        <input id="chatInput" type="text" placeholder="메시지를 입력 후 Enter" />
+      </div>
+    </div>  
 
     <!-- 현재 방 정보 표시 -->
     <strong id="roomInfo"></strong>
@@ -213,6 +287,8 @@
       const nickname = urlParams.get('nickname') || "익명";
 
       let room;
+      let isChatOpen = false; // 채팅 입력창이 열려 있는지 여부
+
       let oldPlayerCount = 0;   // 이전 인원 (0,1,2...)
       let currentProgress = 0;  // 현재 진행(%) - 0→50→100
 
@@ -228,6 +304,15 @@
       const countdownText = document.getElementById('countdownText');
       const gameContainer = document.getElementById('gameContainer');
       const roomInfo = document.getElementById('roomInfo');
+
+      // DOM 참조
+      const chatContainer = document.createElement("div");
+      // 이미 HTML에 작성했다면, document.getElementById("chatContainer") 등으로 가져오세요.
+      const chatLog = document.getElementById("chatLog");
+      const chatInput = document.getElementById("chatInput");
+
+      // 내 닉네임
+      const myNickname = nickname;
 
       // 페이지 로드 시 로비 화면 표시
       lobbyContainer.style.display = "block";
@@ -260,6 +345,12 @@
         room.onMessage("playerCount", (message) => {
           const newCount = message.count;
           updateProgress(newCount);
+        });
+
+        // 채팅 수신 처리
+        room.onMessage("chat", (data) => {
+          // data = { sessionId, nickname, text }
+          displayChatMessage(data.sessionId, data.nickname, data.text);
         });
 
         // 2) Colyseus의 state.players 사용
@@ -399,6 +490,66 @@
           room.send("moveTo", { x: e.clientX, y: e.clientY });
         });
       }
+
+      // 채팅 메시지 표시 함수
+      function displayChatMessage(sessionId, senderNickname, text) {
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("chat-message");
+
+        const nicknameSpan = document.createElement("span");
+        nicknameSpan.classList.add("nickname");
+
+        if (sessionId === room.sessionId) {
+          // 내 메시지
+          nicknameSpan.classList.add("my-nickname");
+        } else {
+          // 상대 메시지
+          nicknameSpan.classList.add("other-nickname");
+        }
+        nicknameSpan.textContent = "[전체] " + senderNickname + ": ";
+
+        const textSpan = document.createElement("span");
+        textSpan.classList.add("chat-text");
+        textSpan.textContent = text;
+
+        messageDiv.appendChild(nicknameSpan);
+        messageDiv.appendChild(textSpan);
+
+        chatLog.appendChild(messageDiv);
+
+        // 스크롤 맨 아래로
+        chatLog.scrollTop = chatContainer.scrollHeight;
+        messageDiv.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Enter 키 동작
+      window.addEventListener("keydown", (e) => {
+        // 채팅 입력창이 닫혀있는 상태에서 Enter 누르면 => 채팅 입력 열기
+        if ((e.key === "Enter"  || e.keyCode === 13) && !isChatOpen) {
+          isChatOpen = true;
+          chatInput.style.display = "block";
+          chatInput.focus();
+          // 게임 캐릭터 움직임 단축키 등과 충돌하지 않도록 e.stopPropagation()을 쓸 수도 있음
+        }
+        // 채팅 입력창이 열려있는 상태에서 Enter 누르면 => 메시지 전송
+        else if ((e.key === "Enter"  || e.keyCode === 13) && isChatOpen) {
+          const text = chatInput.value.trim();
+          if (text) {
+            // 서버로 전송
+            room.send("chat", text);
+          }
+          // 입력값 비우고 창 닫기
+          chatInput.value = "";
+          chatInput.style.display = "none";
+          isChatOpen = false;
+        }
+        // 채팅창이 열려있는데 Esc 누르면 => 취소(닫기)
+        else if (e.key === "Escape" && isChatOpen) {
+          chatInput.value = "";
+          chatInput.style.display = "none";
+          isChatOpen = false;
+        }
+      });
 
       // ================================
       // 진행바 & 카운트다운 로직

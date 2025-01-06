@@ -186,9 +186,11 @@ export class State extends Schema {
         if (player.hp > 0 && someoneDefeated) {
             player.victoryNum = 1; // Player wins
             console.log(player.victoryNum);
+            return;
         } else if (player.hp <= 0) {
             player.victoryNum = 2; // Player loses
             console.log(player.victoryNum);
+            return;
         }
     }
 }
@@ -200,7 +202,7 @@ export class StateHandlerRoom extends Room<State> {
     autoDispose = false;
 
     private disposeTimeout: NodeJS.Timeout | null = null;
-    private disposeDelay: number = 10000; // 10초
+    private disposeDelay: number = 5000; // 10초
 
     // 메서드:
     // onCreate: 방이 생성될 때 호출. 초기 상태를 설정하고, "move" 메시지를 처리하는 핸들러를 등록.

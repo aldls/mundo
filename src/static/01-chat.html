@@ -46,6 +46,50 @@
           transform: rotate(-360deg); /* 끝 각도 (시계 반대방향) */
         }
       }
+      .victory-screen-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60%;
+        height: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+}
+      .victory-screen {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .button-container {
+        /* position: absolute;
+        bottom: 20px;
+        right: 20px; */
+        display: flex;
+        gap: 15px; /* 버튼 사이의 간격 조정 */
+        margin-bottom: 10px;
+      }
+
+      .restart-button,
+      .lobby-button {
+        padding: 10px 20px;
+        font-size: 18px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .restart-button {
+        background-color: #4CAF50;
+        color: white;
+      }
+
+      .lobby-button {
+        background-color: #007BFF;
+        color: white;
+      }
       /* #roomInfo {
         margin-top: 20px;
       } */
@@ -258,32 +302,69 @@
               cancelAnimationFrame(animate);
   
               // 승리 화면 띄우기
+              const victoryContainer = document.createElement("div");
+              victoryContainer.className = "victory-screen-container";
+              document.body.appendChild(victoryContainer);
+
               const victoryVideo = document.createElement("img");
               victoryVideo.src = "victory.gif"; 
-              victoryVideo.style.position = "fixed";
-              victoryVideo.style.top = "50%";
-              victoryVideo.style.left = "50%";
-              victoryVideo.style.transform = "translate(-50%, -50%)";
-              victoryVideo.style.width = "80%";
-              victoryVideo.style.zIndex = "1000";
-              document.body.appendChild(victoryVideo);
+              victoryVideo.className = "victory-screen";
+              victoryContainer.appendChild(victoryVideo);
+
+              const buttonContainer = document.createElement("div");
+              buttonContainer.className = "button-container";
+              victoryContainer.appendChild(buttonContainer);
+
+              const restartButton = document.createElement("button");
+              restartButton.innerText = "Play Again";
+              restartButton.className = "restart-button";
+              restartButton.onclick = () => {
+                room.send("restartGame"); //서버도 리셋셋
+                location.reload(); // 페이지 새로고침으로 게임 재시작
+              };
+              buttonContainer.appendChild(restartButton);
+
+              const lobbyButton = document.createElement("button");
+              lobbyButton.innerText = "Back Lobby";
+              lobbyButton.className = "lobby-button";
+              lobbyButton.onclick = () => {
+                window.location.href = "/07-custom-lobby-room.html";
+              };
+              buttonContainer.appendChild(lobbyButton);
             } 
             else if(player.victoryNum === 2 && room.sessionId == sessionId){
               cancelAnimationFrame(animate);
 
               // 패배 화면 띄우기
+              const defeatContainer = document.createElement("div");
+              defeatContainer.className = "victory-screen-container";
+              document.body.appendChild(defeatContainer);
+
               const defeatVideo = document.createElement("img");
               defeatVideo.src = "defeat1.gif";
-              defeatVideo.style.position = "fixed";
-              defeatVideo.style.top = "50%";
-              defeatVideo.style.left = "50%";
-              defeatVideo.style.transform = "translate(-50%, -50%)";
-              defeatVideo.style.width = "80%";
-              defeatVideo.style.zIndex = "1000";
-              document.body.appendChild(defeatVideo);
-            }
-            {
-              console.log("왜 안되냐고고");
+              defeatVideo.className = "victory-screen";
+              defeatContainer.appendChild(defeatVideo);
+
+              const buttonContainer = document.createElement("div");
+              buttonContainer.className = "button-container";
+              defeatContainer.appendChild(buttonContainer);
+
+              const restartButton = document.createElement("button");
+              restartButton.innerText = "Play Again";
+              restartButton.className = "restart-button";
+              restartButton.onclick = () => {
+                room.send("restartGame"); //서버도 리셋셋
+                location.reload(); // 페이지 새로고침으로 게임 재시작
+              };
+              buttonContainer.appendChild(restartButton);
+
+              const lobbyButton = document.createElement("button");
+              lobbyButton.innerText = "Back Lobby";
+              lobbyButton.className = "lobby-button";
+              lobbyButton.onclick = () => {
+                window.location.href = "/07-custom-lobby-room.html";
+              };
+              buttonContainer.appendChild(lobbyButton);
             }
 
             // 플레이어 Knife 상태 업데이트
@@ -318,6 +399,7 @@
         let canThrowKnife = true; // 쿨타임 상태를 추적하는 변수
         const knifeCooldown = 2000; // 쿨타임 시간 (밀리초)
         window.addEventListener("keydown", function (e) {
+          if(room.state.gameOver) return;
           if (e.key === 'q' && canThrowKnife) {
             room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
             canThrowKnife = false; // 쿨타임 시작
@@ -335,6 +417,7 @@
 
         // 우클릭 이벤트 처리 (이동 명령)
         window.addEventListener("contextmenu", function (e) {
+          if(room.state.gameOver) return;
           e.preventDefault(); // 기본 컨텍스트 메뉴 방지
 
           // 클릭한 위치의 좌표 계산

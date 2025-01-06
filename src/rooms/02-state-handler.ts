@@ -47,6 +47,9 @@ export class State extends Schema {
     @type({ map: Player })
     players = new MapSchema<Player>();
 
+    @type("boolean")
+    gameOver: boolean = false;
+
     something = "This attribute won't be sent to the client-side";
 
     // 메서드
@@ -186,10 +189,12 @@ export class State extends Schema {
         if (player.hp > 0 && someoneDefeated) {
             player.victoryNum = 1; // Player wins
             console.log(player.victoryNum);
+            this.gameOver = true;
             return;
         } else if (player.hp <= 0) {
             player.victoryNum = 2; // Player loses
             console.log(player.victoryNum);
+            this.gameOver = true;
             return;
         }
     }
@@ -216,22 +221,34 @@ export class StateHandlerRoom extends Room<State> {
         this.onMessage("moveTo", (client, data) => {
             console.log("StateHandlerRoom received moveTo from", client.sessionId, ":", data);
             this.state.setTargetPosition(client.sessionId, data);
+            // if(this.state.gameOver) return;
         });
 
         // 식칼 던지기 메시지 처리
         this.onMessage("throwKnife", (client, data) => {
             console.log(`Received throwKnife from ${client.sessionId}`);
             this.state.setKnifeThrow(client.sessionId, data);
+            // if(this.state.gameOver) return;
         });         
 
         // 주기적으로 플레이어 위치 업데이트 (예: 60 FPS -> 16ms 간격)
         this.setSimulationInterval((deltaTime) => {
             this.state.updatePlayers();
+            // if(this.state.gameOver) return;
         }, 16); // 16ms는 약 60 FPS에 해당
 
         this.onMessage("finishScene", (client) => {
             console.log("Finish game", client.sessionId);
             this.state.showFinishScene(client.sessionId);
+        })
+
+        this.onMessage("restartGame", (client) => {
+            console.log("Restart game");
+            this.state.players.forEach((player) =>{
+                player.hp = 100;
+                player.victoryNum = 0;
+            });
+            this.state.gameOver = false;
         })
     }
 

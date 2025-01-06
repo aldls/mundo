@@ -155,7 +155,7 @@ app.get('/set-nickname', (req, res) => {
 
 //----------------------------------------------------------------------------------------------------
 // Game URL to redirect the user after login
-const gameUrl = 'http://localhost:2567/01-chat.html'; // Replace with the actual game URL
+const gameUrl = 'http://localhost:2567/07-custom-lobby-room.html'; // Replace with the actual game URL
 
 
 //----------------------------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ app.get('/dashboard', async (req, res) => {
   }
 
   // Render the dashboard EJS template and pass the user data
-  res.render('dashboard', { user: req.user });
+  res.render('dashboard', { user: req.user, gameUrl });
 });
 
 

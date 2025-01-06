@@ -4,9 +4,17 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 require('dotenv').config();
 const mongoose = require('mongoose');
-const path = require('path');
 
+const path = require('path');
 const app = express();
+// Serve static files from the 'Client/public' directory
+app.use(express.static('Client/public'));
+
+// Use EJS as the view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views', 'pages')); // Set views path to 'views/pages'
+
+
 
 // Use session middleware
 app.use(session({
@@ -92,20 +100,7 @@ passport.deserializeUser((id, done) => {
 
 app.get('/', (req, res) => {
   if (req.isAuthenticated()) {
-    if (req.user.nickname && req.user.nickname.startsWith('user-')) {
-      // Redirect to nickname change page if the user has the default nickname
-      res.redirect('/set-nickname');
-    } else {
-      res.send(`
-        <h1>Welcome to the Summoner's Rift, ${req.user.nickname}!</h1>
-          <form action="/set-nickname" method="POST">
-          <label for="nickname">Enter your nickname:</label>
-          <input type="text" name="nickname" required />
-          <button type="submit">Submit</button>
-        </form>
-        <a href="/logout">Logout</a>
-      `);
-    }
+    res.redirect('login.html');
   } else {
     res.sendFile(path.join(__dirname, '../Client/public', 'login.html'));
   }
@@ -148,20 +143,13 @@ app.get('/loading', (req, res) => {
 app.get('/set-nickname', (req, res) => {
   if (req.isAuthenticated()) {
     if (req.user.nickname.startsWith('user-')) {
-      // Display the form to set a permanent nickname
-      res.send(`
-        <h1>Set Your Nickname</h1>
-        <form action="/set-nickname" method="POST">
-          <label for="nickname">Enter your permanent nickname:</label>
-          <input type="text" name="nickname" required />
-          <button type="submit">Submit</button>
-        </form>
-      `);
+      // Pass dynamic data (like errors or user info) to the EJS template
+      res.render('nickname', { error: '' });
     } else {
-      res.redirect('/dashboard'); // Redirect to home if the nickname is already set
+      res.redirect('/loading'); // Redirect to home if the nickname is already set
     }
   } else {
-    res.redirect('/dashboard'); // Redirect to login if not authenticated
+    res.redirect('/'); // Redirect to login if not authenticated
   }
 });
 
@@ -177,53 +165,11 @@ app.get('/dashboard', async (req, res) => {
     return res.redirect('/'); // Redirect to login if not authenticated
   }
 
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).send('User not found');
-    }
-
-    res.send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>User Dashboard</title>
-        <link rel="stylesheet" href="styles.css"> <!-- Assuming you have the CSS file -->
-      </head>
-      <body>
-        <div class="container">
-          <!-- Left Side -->
-          <div class="left-side">
-            <h1>Welcome to the Dashboard, ${user.nickname}!</h1>
-            <button onclick="window.location.href='/set-nickname'">Set Nickname</button>
-            <button onclick="window.location.href='/logout'">Logout</button>
-          </div>
-
-          <!-- Right Side -->
-          <div class="right-side">
-            <h2>User Profile</h2>
-            <img src="${user.photo}" alt="Profile Picture" class="profile-photo" />
-            <p><strong>Nickname:</strong> ${user.nickname || 'Not set'}</p>
-            <p><strong>Level:</strong> ${user.level}</p>
-            <button onclick="window.location.href='/edit-profile'">Edit Profile</button>
-            <br><br>
-            <button onclick="window.location.href='${gameUrl}'">Play Game</button>
-            <br><br>
-            <form action="/delete-account" method="POST" onsubmit="return confirm('Are you sure you want to delete your account? This action is irreversible.')">
-              <button type="submit" style="color: red;">Delete Account</button>
-            </form>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error retrieving user data');
-  }
+  // Render the dashboard EJS template and pass the user data
+  res.render('dashboard', { user: req.user });
 });
+
+
 
 
 
@@ -242,49 +188,30 @@ mongoose.connect('mongodb://localhost:27017/mydb')
 
 //----------------------------------------------------------------------------------------------------  
 // Route to handle nickname submission
-// Route to handle nickname submission
 app.post('/set-nickname', async (req, res) => {
   const { nickname } = req.body;
 
   // Ensure the nickname is not empty
   if (!nickname || nickname.trim() === '' || nickname.length < 3 || nickname.length > 20) {
-    return res.send(`
-      <h1>Nickname must be between 3 and 20 characters.</h1>
-      <form action="/set-nickname" method="POST">
-        <label for="nickname">Enter your permanent nickname:</label>
-        <input type="text" name="nickname" required />
-        <button type="submit">Submit</button>
-      </form>
-      <a href="/">Cancel</a>
-    `);
+    return res.render('nickname', {
+      error: "Nickname must be between 3 and 20 characters."
+    });
   }
-  
 
   if (req.user) {
     try {
       // Check if the nickname is already taken
       const existingUser = await User.findOne({ nickname });
       if (existingUser && existingUser._id.toString() !== req.user._id.toString()) {
-        return res.send(`
-          <h1>Oops! The nickname "${nickname}" is already taken. Please choose a different one.</h1>
-          <form action="/set-nickname" method="POST">
-            <label for="nickname">Enter a new nickname:</label>
-            <input type="text" name="nickname" required />
-            <button type="submit">Submit</button>
-          </form>
-          <a href="/">Cancel</a>
-        `);
+        return res.render('nickname', {
+          error: `이런! "${nickname}" 은/는 이미 사용중입니다. 다른 닉네임을 입력해주세요.`
+        });
       }
 
       // Set the nickname
       req.user.nickname = nickname;
       await req.user.save();
-
-      res.send(`
-        <h1>Welcome to the Summoner's Rift, ${req.user.nickname}!</h1>
-        <a href="/logout">Logout</a>
-        <a href="/loading">Go To Main Page</a>
-      `);
+      res.redirect('/loading');
     } catch (err) {
       console.error(err);
       res.status(500).send('Error saving nickname');

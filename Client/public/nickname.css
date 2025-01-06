@@ -1,0 +1,145 @@
+/* Reset some default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body and background styling */
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    background: url('rift.png') no-repeat center center fixed;
+    background-size: cover;
+    overflow: hidden;
+}
+
+Background overlay
+.background-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: -1;
+}
+
+/* Main container for content */
+.container {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 40px;
+    border-radius: 15px;
+    width: 80%;
+    max-width: 400px;
+
+    display: flex; /* Use flexbox to align items */
+    flex-direction: column; /* Stack items vertically */
+    justify-content: center; /* Center the items vertically */
+    align-items: center; /* Align items horizontally */
+    gap: 20px; /* Add some space between elements */
+}
+
+/* Heading and input styling */
+.container h1 {
+    font-size: 1.5em;
+    color: #C89B3C;
+    margin-bottom: 20px;
+}
+
+/* Nickname form */
+.nickname-box p {
+    font-size: 1.2em;
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+/* Input field styling */
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1em;
+    border: 2px solid #C89B3C;
+    border-radius: 10px;
+    background-color: #32281E;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #FFD700;
+    box-shadow: 0 0 10px #FFD700;
+}
+
+/* Button styling */
+button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1em;
+    font-weight: bold;
+    background-color: #C89B3C;
+    color: #32281E;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #FFD700;
+    transform: scale(1.05);
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+.cancel-button {
+    display: inline-block;
+    text-align: center;
+    padding: 12px 20px;
+    font-size: 1.1em;
+    font-weight: bold;
+    background-color: #C89B3C;
+    color: #32281E;
+    border-radius: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.cancel-button:hover {
+    background-color: #FFD700;
+    transform: scale(1.05);
+}
+
+.cancel-button:active {
+    transform: scale(0.95);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+        width: 90%;
+    }
+
+    .container h1 {
+        font-size: 2em;
+    }
+
+    .container h2 {
+        font-size: 1.5em;
+    }
+
+    input[type="text"], button {
+        font-size: 1em;
+    }
+}

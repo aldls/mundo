@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set Nickname</title>
+  <link rel="stylesheet" href="/nickname.css"> <!-- Correct path -->
+</head>
+<body>
+    <body>
+        <div class="container">
+          <h1>소환사 이름을 입력해주세요</h1>
+      
+          <% if (error) { %>
+            <div style="color: red; font-size: 1.2em; margin-bottom: 20px;">
+              <%= error %>
+            </div>
+          <% } %>
+      
+          <form action="/set-nickname" method="POST">
+            <input type="text" name="nickname" placeholder="소환사 이름" required />
+            <button type="submit">사용하기</button>
+          </form>
+      
+          <a href="/" class="cancel-button">취소</a>
+        </div>
+      </body>
+      
+</body>
+</html>

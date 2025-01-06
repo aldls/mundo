@@ -52,26 +52,60 @@
     </style>
   </head>
   <body>
-    <strong id="roomInfo">Room Management</strong><br><br>
+    <strong id="roomInfo"></strong><br><br>
 
     <!-- **방 ID 입력 및 참여 인터페이스** -->
-    <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
-    <button id="joinButton">Join Room by ID</button>
+    <!-- <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
+    <button id="joinButton">Join Room by ID</button> -->
 
-    <br><br>
+    <!-- <br><br> -->
 
     <!-- **방 생성 버튼 및 방 ID 표시** -->
-    <button id="createButton">Create New Room</button>
+    <!-- **이 줄은 있어야함**  -->
+    <!-- <button id="createButton">Create New Room</button> -->
     <!-- <div id="roomInfo"></div> -->
 
-    <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+    <!-- <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script> -->
     <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
     <script>
       // 서버와의 연결 설정
-      // 서버와의 연결 설정
-      var host = window.document.location.host.replace(/:.*/, '');
-      var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
-      var room;
+      const host = window.document.location.host.replace(/:.*/, '');
+      const client = new Colyseus.Client(
+        location.protocol.replace('http', 'ws') +
+          '//' +
+          host +
+          (location.port ? ':' + location.port : '')
+      );
+      
+      // URL에서 roomId 추출
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomId = urlParams.get('roomId');
+      const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
+      let room;
+
+      // 방에 참여하는 함수
+      function joinRoom(roomId) {
+        client
+          .joinById(roomId, { nickname })
+          .then((room_instance) => {
+            room = room_instance;
+            document.getElementById('roomInfo').innerText = `방에 성공적으로 참여했습니다: ${room.id}`;
+            console.log(`닉네임: ${nickname}, 방에 성공적으로 참여했습니다: ${room.id}`);
+            setupRoomHandlers();
+          })
+          .catch((e) => {
+            console.error('방 참여 실패:', e);
+            alert('방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.');
+          });
+      }
+
+      // 페이지 로드 시 자동으로 방 참여
+      if (roomId) {
+        joinRoom(roomId);
+      } else {
+        alert('유효한 Room ID가 필요합니다.');
+        console.error('URL에서 Room ID를 찾을 수 없습니다.');
+      }
 
       // **방에 참여하는 함수**
       function joinRoomById(roomId) {
@@ -90,6 +124,7 @@
         client.create("state_handler").then(room_instance => {
           room = room_instance;
           console.log(`새로운 방을 생성했습니다: ${room.id}`);
+          document.getElementById("roomInfo").innerText = `방 ID: ${room.id} (공유하여 다른 사용자가 참여할 수 있습니다.)`;
           setupRoomHandlers();
         }).catch(e => {
           console.error("방 생성 실패:", e);
@@ -100,21 +135,10 @@
       // **방 핸들러 설정 함수**
       function setupRoomHandlers() {
         // 게임 시작시 버튼 없애기
-        document.getElementById("roomInfo").innerText = `방 ID: ${room.id} (공유하여 다른 사용자가 참여할 수 있습니다.)`;
-        document.getElementById("roomInfo").style.color = "white";
         document.body.style.backgroundImage = "url('game_background.png')";
         document.body.style.backgroundSize = "100vw 100vh"; // 뷰포트 기준 크기 고정
         document.body.style.backgroundRepeat = "no-repeat";
         
-        //게임 실행하며 그 전 요소들 지우기
-        const createButton = document.getElementById("createButton");
-        const joinButton = document.getElementById("joinButton");
-        const roomIdInput = document.getElementById("roomIdInput");
-          if (createButton || joinButton) {
-            createButton.style.display = "none"; // 버튼 숨기기
-            joinButton.style.display = "none";
-            roomIdInput.style.display = "none";
-          }
 
         // 플레이어 관리
         var players = {};
@@ -177,27 +201,27 @@
           let currentY = player.y;
           function animate() {
               // 창 크기 얻기
-              const windowWidth = window.innerWidth;
-              const windowHeight = window.innerHeight;
+              // const windowWidth = window.innerWidth;
+              // const windowHeight = window.innerHeight;
 
-              // 원의 중심 (화면 중앙)
-              const centerX = windowWidth / 1.8;
-              const centerY = windowHeight / 2;
+              // // 원의 중심 (화면 중앙)
+              // const centerX = windowWidth / 1.8;
+              // const centerY = windowHeight / 2;
 
-              // 원의 반지름 (화면의 40% 크기)
-              const radius = Math.min(windowWidth, windowHeight) * 0.3;
+              // // 원의 반지름 (화면의 40% 크기)
+              // const radius = Math.min(windowWidth, windowHeight) * 0.3;
 
-              // 플레이어의 x, y 좌표 계산
-              const dx = player.x - centerX;
-              const dy = player.y - centerY;
-              const distance = Math.sqrt(dx * dx + dy * dy); // 원의 중심과 플레이어의 거리
+              // // 플레이어의 x, y 좌표 계산
+              // const dx = player.x - centerX;
+              // const dy = player.y - centerY;
+              // const distance = Math.sqrt(dx * dx + dy * dy); // 원의 중심과 플레이어의 거리
 
-              // 플레이어가 원을 벗어났다면, 원 위로 위치를 조정
-              if (distance > radius) {
-                  const angle = Math.atan2(dy, dx); // 플레이어가 원에서 차지하는 각도
-                  player.x = centerX + radius * Math.cos(angle); // 원 위의 x 위치 계산
-                  player.y = centerY + radius * Math.sin(angle); // 원 위의 y 위치 계산
-              }
+              // // 플레이어가 원을 벗어났다면, 원 위로 위치를 조정
+              // if (distance > radius) {
+              //     const angle = Math.atan2(dy, dx); // 플레이어가 원에서 차지하는 각도
+              //     player.x = centerX + radius * Math.cos(angle); // 원 위의 x 위치 계산
+              //     player.y = centerY + radius * Math.sin(angle); // 원 위의 y 위치 계산
+              // }
 
               // 부드러운 이동 (보간)
               const speed = 0.1; // 이동 속도 (0 ~ 1 사이)
@@ -226,20 +250,11 @@
             // HP 바 업데이트
             const hpPercentage = Math.max(player.hp, 0) + "%";
             hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
-            
-
-            // player별로 다른 화면을 띄우기 위해(한쪽의 hp 끝났을 떄)
-            // const allPlayers = room.state.players;
-            // let otherPlayerHp = null;
-
-            // allPlayers.forEach((otherPlayer, otherSessionId)=> {
-            //   if(otherSessionId !== sessionId) {
-            //       otherPlayerHp = otherPlayer.hp;
-            //   }
-            // });
 
             // hp끝나면 화면 종료
-            if (player.victoryNum === 1) {
+
+            room.send("finishScene");
+            if (player.victoryNum === 1 && room.sessionId == sessionId) {
               cancelAnimationFrame(animate);
   
               // 승리 화면 띄우기
@@ -253,7 +268,7 @@
               victoryVideo.style.zIndex = "1000";
               document.body.appendChild(victoryVideo);
             } 
-            else if(player.victoryNum === 2){
+            else if(player.victoryNum === 2 && room.sessionId == sessionId){
               cancelAnimationFrame(animate);
 
               // 패배 화면 띄우기
@@ -331,20 +346,6 @@
         });
       }
 
-      // **방 참여 버튼 이벤트 리스너**
-      document.getElementById("joinButton").addEventListener("click", function() {
-        const roomId = document.getElementById("roomIdInput").value.trim();
-        if (!roomId) {
-          alert("방 ID를 입력하세요.");
-          return;
-        }
-        joinRoomById(roomId);
-      });
-
-      // **방 생성 버튼 이벤트 리스너**
-      document.getElementById("createButton").addEventListener("click", function() {
-        createNewRoom();
-      });
     </script>
   </body>
 </html>

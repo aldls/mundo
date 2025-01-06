@@ -311,6 +311,7 @@
           client.create("state_handler", { nickname: nickname })
             .then((room_instance) => {
               console.log(`방을 생성했습니다: ${room_instance.id}`);
+
               // 방 생성 후 게임 화면으로 리다이렉트
               window.location.href = `05-lobby-room.html?roomId=${room_instance.id}&nickname=${encodeURIComponent(nickname)}`;
             })

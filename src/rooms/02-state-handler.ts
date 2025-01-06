@@ -263,6 +263,7 @@ export class StateHandlerRoom extends Room<State> {
             this.state.showFinishScene(client.sessionId);
         })
 
+        //게임 다시 시작하기기
         this.onMessage("restartGame", (client) => {
             console.log("Restart game");
             this.state.players.forEach((player) =>{
@@ -273,10 +274,26 @@ export class StateHandlerRoom extends Room<State> {
             this.state.gameOver = false;
         })
 
+        //상대방이 버튼 클릭했는지 확인하는 로직(수정해야함)
+        // 내가 먼저 누르면 업데이트 안됨, 내가 2번 눌러도 넘어감감
         this.onMessage("buttonClicked", (client) =>{
             console.log("Select button");
             this.state.selectButton += 1;
         })
+
+        // Chatting
+        this.onMessage("chat", (client, text: string) => {
+            // 현재 플레이어 정보
+            const player = this.state.players.get(client.sessionId);
+            const nickname = player ? player.nickname : "익명";
+
+            // 모든 클라이언트에게 broadcast
+            this.broadcast("chat", {
+                sessionId: client.sessionId,
+                nickname: nickname,
+                text: text,
+            });
+        });
     }
 
     // onAuth(client, options, req) {

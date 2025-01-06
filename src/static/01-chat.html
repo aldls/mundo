@@ -2,7 +2,6 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width" />
-
     <style>
       body {
         margin: 0; 
@@ -208,6 +207,71 @@
         background-color: #007BFF;
         color: white;
       }
+       /* 채팅 관련련 */
+       ::-webkit-scrollbar {
+        width: 12px; /* 스크롤바 너비 */
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background-color: #795C26; /* 스크롤바 색상 */
+        border-radius: 6px; /* 스크롤바 끝 모양 */
+        border: 3px solid transparent; /* 안쪽 여백 효과 */
+        background-clip: padding-box; /* 배경 잘림 방지 */
+      }
+
+      ::-webkit-scrollbar-track {
+        background-color: rgba(0, 0, 0, 0.3); /* 트랙 색상 */
+        border-radius: 6px;
+      }
+
+      #chatContainer {
+        position: absolute; 
+        left: 10px;
+        bottom: 10px; 
+        width: 300px;
+        margin-bottom: 300px;
+        max-height: 200px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #chatLog {
+        flex: 1; 
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end; /* 최근 메시지를 아래쪽에 위치시킴 */
+      }
+
+      .chat-message {
+        margin: 2px 0;
+        line-height: 1.2em;
+        font-size: 14px;
+      }
+
+      .nickname {
+        font-weight: bold;
+        margin-right: 4px;
+      }
+      .my-nickname {
+        color: #41AED9;
+      }
+      .other-nickname {
+        color: #D93636;
+      }
+      .chat-text {
+        color: white;
+      }
+
+      #chatInput {
+        display: none;       /* 처음엔 숨김. Enter키로 열기 */
+        border: 1px solid #666;
+        color: white;
+        background: rgba(0,0,0,0.7);
+        padding: 4px;
+        font-size: 14px;
+        outline: none;
+      }
       /* 디버그용 (현재 방 정보) */
       #roomInfo {
         position: absolute;
@@ -248,12 +312,17 @@
     </div>
 
     <!-- 게임 화면 -->
-    <div id="gameContainer"></div>
+    <div id="gameContainer">
+      <!-- 아래는 추가된 코드 (채팅 영역) -->
+      <div id="chatContainer">
+        <div id="chatLog"></div>
+        <input id="chatInput" type="text" placeholder="메시지를 입력 후 Enter" />
+      </div>
+    </div>
 
     <!-- 현재 방 정보 표시 -->
     <strong id="roomInfo"></strong>
 
-    <!-- <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script> -->
     <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
     <script>
       // 서버와의 연결 설정
@@ -270,6 +339,8 @@
       const roomId = urlParams.get('roomId');
       const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
       let room;
+      let isChatOpen = false;   // 채팅 입력창이 열려 있는지 여부
+
       let oldPlayerCount = 0;   // 이전 인원 (0,1,2...)
       let currentProgress = 0;  // 현재 진행(%) - 0→50→100
 
@@ -285,6 +356,14 @@
       const countdownText = document.getElementById('countdownText');
       const gameContainer = document.getElementById('gameContainer');
       const roomInfo = document.getElementById('roomInfo');
+
+      const chatContainer = document.createElement("div");
+      // 이미 HTML에 작성했다면, document.getElementById("chatContainer") 등으로 가져오세요.
+      const chatLog = document.getElementById("chatLog");
+      const chatInput = document.getElementById("chatInput");
+
+      // 내 닉네임
+      const myNickname = nickname;
 
       // 페이지 로드 시 로비 화면 표시
       lobbyContainer.style.display = "block";
@@ -310,48 +389,22 @@
         // console.error('URL에서 Room ID를 찾을 수 없습니다.');
       }
 
-      // // **방에 참여하는 함수**
-      // function joinRoomById(roomId) {
-      //   client.joinById(roomId).then(room_instance => {
-      //     room = room_instance;
-      //     console.log(`방에 성공적으로 참여했습니다: ${room.id}`);
-      //     setupRoomHandlers();
-      //   }).catch(e => {
-      //     console.error("방 참여 실패:", e);
-      //     alert("방 참여에 실패했습니다. 올바른 방 ID인지 확인하세요.");
-      //   });
-      // }
-
-      // // **새로운 방을 생성하는 함수**
-      // function createNewRoom() {
-      //   client.create("state_handler").then(room_instance => {
-      //     room = room_instance;
-      //     console.log(`새로운 방을 생성했습니다: ${room.id}`);
-      //     document.getElementById("roomInfo").innerText = `방 ID: ${room.id} (공유하여 다른 사용자가 참여할 수 있습니다.)`;
-      //     setupRoomHandlers();
-      //   }).catch(e => {
-      //     console.error("방 생성 실패:", e);
-      //     alert("방 생성에 실패했습니다.");
-      //   });
-      // }
-
       // **방 핸들러 설정 함수**
       function setupRoomHandlers() {
-        // 게임 시작시 버튼 없애기
-        document.body.style.backgroundImage = "url('game_background.png')";
-        document.body.style.backgroundSize = "100vw 100vh"; // 뷰포트 기준 크기 고정
-        document.body.style.backgroundRepeat = "no-repeat";
-
         // 1) 서버에서 "playerCount" 메시지를 받으면 -> 진행바 애니메이션
         room.onMessage("playerCount", (message) => {
           const newCount = message.count;
           updateProgress(newCount);
         });
-
+        // 채팅 수신 처리
+        room.onMessage("chat", (data) => {
+          // data = { sessionId, nickname, text }
+          displayChatMessage(data.sessionId, data.nickname, data.text);
+        });
 
         // 플레이어 관리
-        var players = {};
-        var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
+        const players = {};
+        const colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
 
         // 마우스 위치 저장
         let mouseX = 0;
@@ -364,7 +417,6 @@
           dom.className = "player";
           dom.style.left = player.x + "px";
           dom.style.top = player.y + "px";
-          // dom.style.background = colors[Math.floor(Math.random() * colors.length)];
           dom.style.backgroundColor = "transparent";
           dom.style.backgroundImage = "url('mundoface.png')";
           dom.style.backgroundSize = "cover";
@@ -373,7 +425,7 @@
           // dom.innerText = `Player ${sessionId}`;
 
           const userid = document.createElement("div");
-          userid.innerText = `Player ${sessionId}`;
+          userid.innerText = `Player ${player.nickname}`;
           userid.style.textAlign = "center"; // 텍스트 중앙 정렬
           userid.style.marginTop = "60px";    // 이미지 아래 여백
           userid.style.color = "white";      // 텍스트 색상 변경
@@ -388,7 +440,6 @@
           // HP 바 생성
           const hpBar = document.createElement("div");
           hpBar.className = "hp-bar";
-          // hpBar.style.backgroundColor = dom.style.background; // 플레이어 색과 동일
           hpBar.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
           // 나중에 화면마다 색 동일하도록 바꾸기기
           hpBar.style.width = "100%"; // 초기 HP 100%
@@ -403,7 +454,7 @@
           knifeDom.style.width = "60px";
           knifeDom.style.display = "none"; // 초기에는 보이지 않음
           knifeDom.style.transform = "translate(-50%, -50%)"; // 중앙 정렬
-          document.body.appendChild(knifeDom);
+          gameContainer.appendChild(knifeDom);
 
           // 애니메이션 변수
           let currentX = player.x;
@@ -469,7 +520,7 @@
               // 승리 화면 띄우기
               const victoryContainer = document.createElement("div");
               victoryContainer.className = "victory-screen-container";
-              document.body.appendChild(victoryContainer);
+              gameContainer.appendChild(victoryContainer);
 
               const victoryVideo = document.createElement("img");
               victoryVideo.src = "victory.gif"; 
@@ -507,7 +558,7 @@
               // 패배 화면 띄우기
               const defeatContainer = document.createElement("div");
               defeatContainer.className = "victory-screen-container";
-              document.body.appendChild(defeatContainer);
+              gameContainer.appendChild(defeatContainer);
 
               const defeatVideo = document.createElement("img");
               defeatVideo.src = "defeat1.gif";
@@ -552,21 +603,27 @@
           });
 
           players[sessionId] = dom;
-          document.body.appendChild(dom);
+          gameContainer.appendChild(dom);
         });
 
         // 플레이어 제거
         room.state.players.onRemove(function (player, sessionId) {
           if (players[sessionId]) {
-            document.body.removeChild(players[sessionId]);
+            if (players[sessionId].parentNode) {
+              players[sessionId].parentNode.removeChild(players[sessionId]);
+            }
             delete players[sessionId];
+          }
+          const knifeDom = document.getElementById(`knife-${sessionId}`);
+          if (knifeDom) {
+            knifeDom.remove();
           }
         });
 
-        // 서버 메시지 핸들링 (필요 시)
-        room.onMessage("hello", (message) => {
-          console.log(message);
-        });
+        // // 서버 메시지 핸들링 (필요 시)
+        // room.onMessage("hello", (message) => {
+        //   console.log(message);
+        // });
 
         // 키보드 입력 감지 (칼 던지기)
         let canThrowKnife = true; // 쿨타임 상태를 추적하는 변수
@@ -591,6 +648,67 @@
           e.preventDefault();
           room.send("moveTo", { x: e.clientX, y: e.clientY });
         });
+      }
+
+      // 채팅 메시지 표시 함수
+      function displayChatMessage(sessionId, senderNickname, text) {
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("chat-message");
+
+        const nicknameSpan = document.createElement("span");
+        nicknameSpan.classList.add("nickname");
+
+        if (sessionId === room.sessionId) {
+          // 내 메시지
+          nicknameSpan.classList.add("my-nickname");
+        } else {
+          // 상대 메시지
+          nicknameSpan.classList.add("other-nickname");
+        }
+        nicknameSpan.textContent = "[전체] " + senderNickname + ": ";
+
+        const textSpan = document.createElement("span");
+        textSpan.classList.add("chat-text");
+        textSpan.textContent = text;
+
+        messageDiv.appendChild(nicknameSpan);
+        messageDiv.appendChild(textSpan);
+
+        chatLog.appendChild(messageDiv);
+
+        // 스크롤 맨 아래로
+        chatLog.scrollTop = chatContainer.scrollHeight;
+        messageDiv.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Enter 키 동작
+      window.addEventListener("keydown", (e) => {
+        // 채팅 입력창이 닫혀있는 상태에서 Enter 누르면 => 채팅 입력 열기
+        if ((e.key === "Enter"  || e.keyCode === 13) && !isChatOpen) {
+          isChatOpen = true;
+          chatInput.style.display = "block";
+          chatInput.focus();
+          // 게임 캐릭터 움직임 단축키 등과 충돌하지 않도록 e.stopPropagation()을 쓸 수도 있음
+        }
+        // 채팅 입력창이 열려있는 상태에서 Enter 누르면 => 메시지 전송
+        else if ((e.key === "Enter"  || e.keyCode === 13) && isChatOpen) {
+          const text = chatInput.value.trim();
+          if (text) {
+            // 서버로 전송
+            room.send("chat", text);
+          }
+          // 입력값 비우고 창 닫기
+          chatInput.value = "";
+          chatInput.style.display = "none";
+          isChatOpen = false;
+        }
+        // 채팅창이 열려있는데 Esc 누르면 => 취소(닫기)
+        else if (e.key === "Escape" && isChatOpen) {
+          chatInput.value = "";
+          chatInput.style.display = "none";
+          isChatOpen = false;
+        }
+      });
 
         // ================================
       // 진행바 & 카운트다운 로직
@@ -668,7 +786,7 @@
           }
         }, 1000);
       }
-    }
+    
     </script>
   </body>
 </html>

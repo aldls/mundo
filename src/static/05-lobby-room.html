@@ -3,6 +3,10 @@
   <head>
     <meta name="viewport" content="width=device-width" />
     <style>
+      * {
+        cursor: url('normal.cur'), auto; /* 사용자 정의 커서 */
+      }
+
       body {
         margin: 0; 
         padding: 0;
@@ -229,7 +233,105 @@
         font-size: 14px;
         outline: none;
       }
-      
+
+      /************************************
+      * 스킬 아이콘 (하단 중앙)
+      ************************************/
+      #skillContainer {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+
+        width: 128px;         /* 크기 2배 키우기 */
+        height: 128px;
+        border: 8px solid #A09B8C;  /* 평소 테두리 색 */
+        border-radius: 50%;
+        box-sizing: border-box;
+        z-index: 2000;
+        
+        /* 마우스 오버하면 툴팁 표시 */
+        /* (기본값: display: none; => hover 시 block) */
+      }
+
+      #skillIcon {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: block;
+      }
+
+      /* 쿨타임 오버레이 (처음에는 숨김) */
+      #skillOverlay {
+        position: absolute;
+        top: 0; 
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        pointer-events: none;
+        display: none;  /* 처음에는 숨김 → 스킬 사용하면 block */
+      }
+
+      /* 남은 쿨타임 숫자 */
+      #skillText {
+        position: absolute;
+        top: 50%; 
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 24px;       /* 아이콘 커졌으니 폰트도 키움 */
+        font-weight: bold;
+        pointer-events: none;
+      }
+
+      /* Q 표시 (아이콘 왼쪽 아래 구석) */
+      #skillKey {
+        position: absolute;
+        bottom: 4px; 
+        left: 4px;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        pointer-events: none;
+        text-shadow: 1px 1px 2px black;
+      }
+
+      /************************************
+      * 스킬 툴팁
+      ************************************/
+      #skillTooltip {
+        position: absolute;
+        bottom: 135px; /* 아이콘 위쪽에 배치 */
+        left: 50%;
+        transform: translateX(-50%);
+        
+        display: none; /* 기본적으로 숨김 */
+        width: 600px; /* 이미지의 적절한 크기로 조정 */
+        pointer-events: none; /* 마우스가 툴팁으로 가도 사라지지 않도록 */
+      }
+      #skillTooltip img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      /* 아이콘에 마우스를 올리면 툴팁 이미지 표시 */
+      #skillContainer:hover #skillTooltip {
+          display: block;
+      }
+
+      #gogoEffect {
+        animation: fadeOut 0.8s forwards;
+      }
+
+      @keyframes fadeOut {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
     </style>
   </head>
   <body>
@@ -262,11 +364,36 @@
 
     <!-- 게임 화면 -->
     <div id="gameContainer">
-      <!-- 아래는 추가된 코드 (채팅 영역) -->
+      <div id="gogoEffect" style="display: none; position: absolute;">
+        <img src="gogo.png" alt="GoGo Effect" style="width: 50px; height: 50px;">
+      </div>
+
+      <!-- (채팅 영역) -->
       <div id="chatContainer">
         <div id="chatLog"></div>
         <input id="chatInput" type="text" placeholder="메시지를 입력 후 Enter" />
       </div>
+
+      <!-- 여기에 스킬 UI 추가 -->
+      <div id="skillContainer">
+        <!-- skill.png 아이콘 -->
+        <img id="skillIcon" src="skill.png" alt="skill" />
+    
+        <!-- 쿨타임 진행도를 보여줄 반투명 원형 오버레이 -->
+        <div id="skillOverlay"></div>
+    
+        <!-- 남은 쿨타임 초 표시 영역 -->
+        <div id="skillText"></div>
+    
+        <!-- Q 표시 -->
+        <div id="skillKey">Q</div>
+
+        <!-- 마우스 오버 시 표시할 툴팁 -->
+        <div id="skillTooltip">
+          <img src="skill_detail.png" alt="스킬 툴팁 이미지">
+        </div>
+      </div>
+
     </div>  
 
     <!-- 현재 방 정보 표시 -->
@@ -470,13 +597,64 @@
         // 칼 던지기
         let canThrowKnife = true;
         const knifeCooldown = 2000;
+
+        const skillContainer = document.getElementById("skillContainer");
+        const skillOverlay   = document.getElementById("skillOverlay");
+        const skillText      = document.getElementById("skillText");
         window.addEventListener("keydown", (e) => {
+          if (isChatOpen) return;
+
           if (e.key === 'q' && canThrowKnife) {
             room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
-            canThrowKnife = false;
-            setTimeout(() => { canThrowKnife = true; }, knifeCooldown);
+            startSkillCooldown(2); // 2초 쿨타임 시작 (단위: '초')
           }
         });
+
+        /**
+         * 스킬 쿨타임 UI 시작
+         * @param {number} totalSeconds - 전체 쿨타임 (초)
+         */
+        function startSkillCooldown(totalSeconds) {
+          canThrowKnife = false;                      // 스킬 잠금
+          skillContainer.style.borderColor = "#1E282D"; // 쿨도는 동안 테두리 색
+
+          // 쿨타임 오버레이 초기화 (파이 전부 채워진 상태)
+          skillOverlay.style.display = "block";
+          skillOverlay.style.background =
+            "conic-gradient(#053959 0deg, #053959 360deg)";
+
+          // 남은 시간
+          let timeLeft = totalSeconds;
+          skillText.textContent = Math.ceil(timeLeft);
+
+          // 0.1초 간격으로 쿨타임 갱신 (애니메이션 더 부드럽게 하려면 0.05초 등으로 줄여도 됨)
+          const interval = setInterval(() => {
+            timeLeft -= 0.1;
+
+            // 0초 이하 => 쿨타임 종료
+            if (timeLeft <= 0) {
+              clearInterval(interval);
+              skillText.textContent = "";                 // 남은 초 제거
+              skillOverlay.style.background = "none";     // 오버레이 제거
+              skillContainer.style.borderColor = "#A09B8C"; // 다시 원래 테두리색
+              canThrowKnife = true;                       // 스킬 사용 가능
+              return;
+            }
+
+            // 진행 각도(0~360)
+            // timeLeft가 2초->0초로 갈수록 360->0도가 되어야 하므로
+            // angle = (timeLeft / totalSeconds) * 360
+            const angle = (timeLeft / totalSeconds) * 360;
+            const temp_angle = 360 - angle
+            // 오버레이 업데이트
+            // 12시부터 시계방향으로 #053959(남은 쿨) -> 그 외는 transparent
+            skillOverlay.style.background =
+              `conic-gradient(transparent 0deg, transparent ${temp_angle}deg, #053959 ${temp_angle}deg, #053959 360deg)`;
+
+            // 남은 시간(초)를 소수점 올림해서 표시 (1.9초 -> 2초로 보이게)
+            skillText.textContent = Math.ceil(timeLeft);
+          }, 100); // 0.1초마다 갱신
+        }
 
         // 마우스
         window.addEventListener("mousemove", (e) => {
@@ -484,10 +662,39 @@
           mouseY = e.clientY;
         });
 
+        // DOM 참조
+        const gogoEffect = document.getElementById("gogoEffect");
+        let gogoTimeout = null; // 기존 타이머를 저장할 변수
+
         // 우클릭 이동
         window.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           room.send("moveTo", { x: e.clientX, y: e.clientY });
+          
+          // 클릭 위치에 이미지 이동
+          gogoEffect.style.left = `${e.clientX - 25}px`; // 이미지 중심으로 정렬
+          gogoEffect.style.top = `${e.clientY - 25}px`;
+
+          // 애니메이션 초기화
+          gogoEffect.style.display = "none"; // 강제로 숨겼다가
+          void gogoEffect.offsetWidth; // DOM 리플로우 강제 트리거
+          gogoEffect.style.display = "block"; // 다시 표시
+
+          // 애니메이션 강제 재시작
+          gogoEffect.style.animation = "none"; // 기존 애니메이션 제거
+          setTimeout(() => {
+            gogoEffect.style.animation = "fadeOut 0.8s forwards"; // 애니메이션 다시 추가
+          }, 0);
+
+          // 기존 타이머가 있으면 취소
+          if (gogoTimeout) {
+            clearTimeout(gogoTimeout);
+          }
+
+          // 새로운 타이머 설정 (0.8초 후 이미지 숨김)
+          gogoTimeout = setTimeout(() => {
+            gogoEffect.style.display = "none";
+          }, 800); // 애니메이션과 동일한 시간 설정
         });
       }
 

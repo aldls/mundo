@@ -327,6 +327,7 @@
     <script>
       // 서버와의 연결 설정
       const host = window.document.location.host.replace(/:.*/, '');
+
       const client = new Colyseus.Client(
         location.protocol.replace('http', 'ws') +
           '//' +
@@ -337,6 +338,13 @@
       // URL에서 roomId 추출
       const urlParams = new URLSearchParams(window.location.search);
       const roomId = urlParams.get('roomId');
+
+      // url 짧게 만들기(닉네임 안 보임)
+      // reload할 때 문제가 있어서 다시 확인해야 할 듯
+      const originalUrl = window.location.href;
+      const shortUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({ originalUrl }, document.title, shortUrl);
+
       const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
       let room;
       let isChatOpen = false;   // 채팅 입력창이 열려 있는지 여부
@@ -418,7 +426,7 @@
           dom.style.left = player.x + "px";
           dom.style.top = player.y + "px";
           dom.style.backgroundColor = "transparent";
-          dom.style.backgroundImage = "url('mundoface.png')";
+          dom.style.backgroundImage = "url('mundo_ill.png')";
           dom.style.backgroundSize = "cover";
           dom.style.backgroundRepeat = "no-repeat";
           dom.style.backgroundPosition = "center";
@@ -459,6 +467,11 @@
           // 애니메이션 변수
           let currentX = player.x;
           let currentY = player.y;
+          
+          //좌우 반전 위해 이전 위치 저장
+          let previousX = player.x;
+          let previousY = player.y;
+
           function animate() {
               // 창 크기 얻기
               // const windowWidth = window.innerWidth;
@@ -488,6 +501,12 @@
               currentX += (player.x - currentX) * speed;
               currentY += (player.y - currentY) * speed;
 
+              // 방향에 따른 이미지 반전 (scaleX 사용)
+              if (player.x > previousX) {
+                  dom.style.transform = "scaleX(1)"; // 오른쪽 이동 시 정상 방향
+              } else if (player.x < previousX) {
+                  dom.style.transform = "scaleX(-1)"; // 왼쪽 이동 시 좌우 반전
+              }
               // DOM 업데이트
               dom.style.left = `${currentX}px`;
               dom.style.top = `${currentY}px`;
@@ -496,6 +515,10 @@
               if (Math.abs(player.x - currentX) > 0.1 || Math.abs(player.y - currentY) > 0.1) {
                   requestAnimationFrame(animate); // 계속 애니메이션 실행
               }
+              // 현재 위치를 이전 위치로 갱신
+              previousX = player.x;
+              previousY = player.y;
+
             }
 
           // 창 크기 변경 시 동적으로 범위가 업데이트되도록 이벤트 리스너 추가
@@ -512,7 +535,6 @@
             hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
 
             // hp끝나면 화면 종료
-
             room.send("finishScene");
             if (player.victoryNum === 1 && room.sessionId == sessionId) {
               cancelAnimationFrame(animate);
@@ -538,7 +560,8 @@
                 room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
                 if(room.state.selectButton === 2){
                   room.send("restartGame"); //서버도 리셋
-                  location.reload(); // 페이지 새로고침으로 게임 재시작
+                  // location.reload(); // 페이지 새로고침으로 게임 재시작
+                  window.location.href = originalUrl;
                 }
               };
               buttonContainer.appendChild(restartButton);
@@ -573,11 +596,10 @@
               restartButton.innerText = "Play Again";
               restartButton.className = "restart-button";
               restartButton.onclick = () => {
-                room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
-                if(room.state.selectButton === 2){
-                  room.send("restartGame"); //서버도 리셋
-                  location.reload(); // 페이지 새로고침으로 게임 재시작
-                }
+           
+                room.send("restartGame"); //서버도 리셋
+                window.location.href = originalUrl;
+                
               };
               buttonContainer.appendChild(restartButton);
 
@@ -585,7 +607,6 @@
               lobbyButton.innerText = "Back Lobby";
               lobbyButton.className = "lobby-button";
               lobbyButton.onclick = () => {
-                room.send("buttonClicked"); //양쪽 다 선택했는지 확인인
                 window.location.href = "/07-custom-lobby-room.html";
               };
               buttonContainer.appendChild(lobbyButton);

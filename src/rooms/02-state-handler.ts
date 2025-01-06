@@ -190,7 +190,7 @@ export class State extends Schema {
     }    
     // 게임 끝났을 때 승리, 패배 화면 보여주기
     showFinishScene(sessionId: string) {
-        console.log("??????????????");
+        // console.log("??????????????");
         const player = this.players.get(sessionId);
         if(!player) return;
 

@@ -2,6 +2,13 @@
 import { Room, Client } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
+// 게임 상태 정의
+enum GameState {
+    WAITING = "WAITING",
+    COUNTDOWN = "COUNTDOWN",
+    PLAYING = "PLAYING"
+}
+
 // 플레이어 및 상태 정의
 export class Player extends Schema {
     @type("string")
@@ -34,7 +41,7 @@ export class Player extends Schema {
     @type("number")
     hp: number = 100;
 
-    // 이기면 true
+    // 승리(1), 패배(2)
     @type("number")
     victoryNum: number = 0;
 }
@@ -46,6 +53,10 @@ export class Player extends Schema {
 export class State extends Schema {
     @type({ map: Player })
     players = new MapSchema<Player>();
+
+    // 게임 상태
+    @type("string")
+    gameState: GameState = GameState.WAITING; // 초기엔 WAITING
 
     @type("boolean")
     gameOver: boolean = false;
@@ -74,6 +85,9 @@ export class State extends Schema {
 
     // 플레이어의 위치를 목표 위치로 이동시키는 메서드
     updatePlayers() {
+        // 게임 상태가 PLAYING 상태일 때만 실제 이동
+        if (this.gameState !== GameState.PLAYING) return;
+
         const speed = 5; // 플레이어의 이동 속도 (픽셀 단위)
         this.players.forEach(player => {
             const dx = player.targetX - player.x;
@@ -98,6 +112,9 @@ export class State extends Schema {
 
     // 식칼 날리기
     setKnifeThrow(sessionId: string, knifeData: { targetX: number, targetY: number }) {
+        // 게임 상태가 PLAYING이 아닐 땐 무시
+        if (this.gameState !== GameState.PLAYING) return;
+
         const player = this.players.get(sessionId);
         if (player) {
             const dx = knifeData.targetX - player.x;
@@ -203,11 +220,11 @@ export class State extends Schema {
 // StateHandlerRoom 클래스: Colyseus의 Room을 상속받아 방의 동작을 정의.
 // maxClients: 방에 최대 4명의 클라이언트가 접속할 수 있도록 설정.
 export class StateHandlerRoom extends Room<State> {
-    maxClients = 4;
+    maxClients = 2;
     autoDispose = false;
 
     private disposeTimeout: NodeJS.Timeout | null = null;
-    private disposeDelay: number = 5000; // 10초
+    private disposeDelay: number = 500; // 밀리초
 
     // 메서드:
     // onCreate: 방이 생성될 때 호출. 초기 상태를 설정하고, "move" 메시지를 처리하는 핸들러를 등록.
@@ -237,6 +254,7 @@ export class StateHandlerRoom extends Room<State> {
             // if(this.state.gameOver) return;
         }, 16); // 16ms는 약 60 FPS에 해당
 
+        // 게임 종료
         this.onMessage("finishScene", (client) => {
             console.log("Finish game", client.sessionId);
             this.state.showFinishScene(client.sessionId);
@@ -263,6 +281,34 @@ export class StateHandlerRoom extends Room<State> {
         player.nickname = options.nickname || "익명"; // 닉네임 설정
         this.state.players.set(client.sessionId, player);
 
+        // 대기 중인 사람 수 확인
+        console.log("Current player count:", this.clients.length);
+
+        const count = this.clients.length; // 현재 방 인원
+        // 모든 클라이언트에게 playerCount 메시지 전송
+        this.broadcast("playerCount", { count });
+
+        // 만약 maxClients == 현재 접속 클라이언트 수 == 2라면 -> 카운트다운 시작
+        if (this.clients.length === this.maxClients && this.state.gameState === "WAITING") {
+            this.state.gameState = GameState.COUNTDOWN;
+
+            // 모든 클라이언트에게 COUNTDOWN 상태 전송
+            this.broadcast("gameState", { state: "COUNTDOWN" });
+
+            // 3초 후에 PLAYING 시작
+            setTimeout(() => {
+                // 혹시나 중간에 누군가 나갔는지 체크
+                if (this.clients.length === this.maxClients) {
+                    this.state.gameState = GameState.PLAYING;
+                    this.broadcast("gameState", { state: "PLAYING" });
+                } else {
+                    // 다시 WAITING으로 돌려놓든, 취소 처리
+                    this.state.gameState = GameState.WAITING;
+                    this.broadcast("gameState", { state: "WAITING" });
+                }
+            }, 3000);
+        }
+
         // 새 클라이언트가 참여하면 폐기 타이머를 취소
         if (this.disposeTimeout) {
             console.log("New client joined. Canceling dispose timeout...");
@@ -276,10 +322,13 @@ export class StateHandlerRoom extends Room<State> {
         console.log(client.sessionId, "left!");
         this.state.removePlayer(client.sessionId);
 
+        const count = this.clients.length;
+        this.broadcast("playerCount", { count });
+        
         if (this.clients.length === 0) {
             console.log("No clients left. Starting dispose timeout...");
     
-            // 10초 후 방을 폐기하는 타이머 설정
+            // n초 후 방을 폐기하는 타이머 설정
             this.disposeTimeout = setTimeout(() => {
                 console.log("Room is empty for 10 seconds. Disposing room...");
                 this.disconnect(); // 방 폐기

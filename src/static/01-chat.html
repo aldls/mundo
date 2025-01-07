@@ -818,13 +818,15 @@
               const lobbyButton = document.createElement("button");
               lobbyButton.innerText = "Back Lobby";
               lobbyButton.className = "lobby-button";
+              const nickname = room.state.players[room.sessionId].nickname;
               lobbyButton.onclick = () => {
                 room.send("buttonClicked"); //양쪽 다 선택했는지 확인
-                window.location.href = "/07-custom-lobby-room.html";
+                window.location.href = `/07-custom-lobby-room.html?nickname=${encodeURIComponent(nickname)}`;
               };
               buttonContainer.appendChild(lobbyButton);
             } 
             else if(player.victoryNum === 2 && room.sessionId == sessionId){
+              //console.log("?");
               cancelAnimationFrame(animate);
 
               // 패배 화면 띄우기
@@ -856,7 +858,7 @@
               lobbyButton.className = "lobby-button";
               lobbyButton.onclick = () => {
                 room.send("buttonClicked"); //양쪽 다 선택했는지 확인
-                window.location.href = "/07-custom-lobby-room.html";
+                window.location.href = `/07-custom-lobby-room.html?nickname=${encodeURIComponent(nickname)}`;
               };
               buttonContainer.appendChild(lobbyButton);
             }

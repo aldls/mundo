@@ -317,12 +317,16 @@ export class State extends Schema {
 
         if (player.hp > 0 && someoneDefeated) {
             player.victoryNum = 1; // Player wins
-            console.log(player.victoryNum);
+            // console.log(player.nickname);
+            // console.log(player.victoryNum);
+            // console.log(player.hp);
             this.gameOver = true;
             return;
         } else if (player.hp <= 0) {
             player.victoryNum = 2; // Player loses
-            console.log(player.victoryNum);
+            // console.log(player.nickname);
+            // console.log(player.victoryNum);
+            // console.log(player.hp);
             this.gameOver = true;
             return;
         }

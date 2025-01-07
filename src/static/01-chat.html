@@ -120,7 +120,7 @@
         display: none;
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        background-image: url('game_background.png');
+        background-image: url('mundo_background.png');
         background-size: 100vw 100vh;
         background-repeat: no-repeat;
         overflow: hidden;
@@ -846,11 +846,6 @@
               restartButton.className = "restart-button";
               restartButton.onclick = () => {
                 room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
-                // if(room.state.selectButton === 2){
-                //   room.send("restartGame"); //서버도 리셋
-                //   // location.reload(); // 페이지 새로고침으로 게임 재시작
-                //   window.location.href = originalUrl;
-                // }
                 room.send("restartGame"); //서버도 리셋
                 window.location.href = originalUrl;
               };
@@ -907,8 +902,6 @@
           if(room.state.gameOver) return;
           if (e.key === 'q' && canThrowKnife) {
             room.send("throwKnife", { targetX: mouseX, targetY: mouseY });
-            // canThrowKnife = false; // 쿨타임 시작
-            // setTimeout(() => { canThrowKnife = true; }, knifeCooldown);
             startSkillCooldown(2); // 2초 쿨타임 시작 (단위: '초')
           }
         });

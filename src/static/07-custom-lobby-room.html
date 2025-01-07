@@ -224,6 +224,10 @@
           join();
         };
 
+        const originalUrl = window.location.href;
+        const shortUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({ originalUrl }, document.title, shortUrl);
+
         function join() {
           client.joinOrCreate("custom_lobby")
             .then((room_instance) => {

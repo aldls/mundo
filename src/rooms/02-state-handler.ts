@@ -15,10 +15,10 @@ export class Player extends Schema {
     nickname: string = "익명"; // 기본 닉네임
 
     @type("number")
-    x = Math.floor(Math.random() * 400);
+    x: number = 1000;
 
     @type("number")
-    y = Math.floor(Math.random() * 400);
+    y: number = 430;
 
     // 목표 위치 추가
     @type("number")
@@ -307,12 +307,32 @@ export class StateHandlerRoom extends Room<State> {
 
         // this.setState(new State()): 새로운 상태 인스턴스를 생성하여 방의 상태로 설정.
         this.setState(new State());
+        const centerX = 1025; // Center x of the circle
+        const centerY = 450; // Center y of the circle
+        const radius = 260; // Radius of the circle
 
         // 우클릭 움직임 메시지 처리
         this.onMessage("moveTo", (client, data) => {
             console.log("StateHandlerRoom received moveTo from", client.sessionId, ":", data);
-            this.state.setTargetPosition(client.sessionId, data);
+            // this.state.setTargetPosition(client.sessionId, data);
             // if(this.state.gameOver) return;
+            // Calculate the distance from the center of the circle
+            const dx = data.x - centerX;
+            const dy = data.y - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If the player is outside the circle, calculate the position on the circle's edge
+            if (distance > radius) {
+                const angle = Math.atan2(dy, dx); // Calculate the angle of the player from the center
+                const newX = centerX + radius * Math.cos(angle); // Calculate the x coordinate on the circle
+                const newY = centerY + radius * Math.sin(angle); // Calculate the y coordinate on the circle
+
+                // Update the player’s position to be on the circle's edge
+                this.state.setTargetPosition(client.sessionId, { x: newX, y: newY });
+            } else {
+                // If the player is inside the circle, update normally
+                this.state.setTargetPosition(client.sessionId, data);
+            }
         });
 
         // 식칼 던지기 메시지 처리
@@ -325,7 +345,7 @@ export class StateHandlerRoom extends Room<State> {
         // 주기적으로 플레이어 위치 업데이트 (예: 60 FPS -> 16ms 간격)
         this.setSimulationInterval((deltaTime) => {
             this.state.updatePlayers();
-            // if(this.state.gameOver) return;
+            this.state.regeneratePlayersHealth(deltaTime);
         }, 16); // 16ms는 약 60 FPS에 해당
 
         // 게임 종료

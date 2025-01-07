@@ -759,9 +759,23 @@
         const gogoEffect = document.getElementById("gogoEffect");
         let gogoTimeout = null; // 기존 타이머를 저장할 변수
 
+        
+        const bgMusic = new Audio("LoLgameSound.mp3");
+        bgMusic.loop = true; // 무한 반복
+        bgMusic.volume = 0.5; // 볼륨 조정 (0.0 ~ 1.0)
+        
+        let isMusicPlaying = false; // 음악 재생 여부 플래그
         // 우클릭 이동
         window.addEventListener("contextmenu", (e) => {
           e.preventDefault();
+          // 음악이 재생 중이 아니면 시작
+          if (!isMusicPlaying) {
+            bgMusic.play().catch((err) => {
+              console.error("배경음악 재생 중 오류:", err);
+            });
+            isMusicPlaying = true;
+          }
+
           room.send("moveTo", { x: e.clientX, y: e.clientY });
           
           // 클릭 위치에 이미지 이동

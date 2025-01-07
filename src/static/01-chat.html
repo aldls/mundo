@@ -145,16 +145,34 @@
         top: -15px; /* 캐릭터 위에 위치하도록 조정 */
       }
       .hp-bar-container {
-        position: absolute;
-        width: 100px;
+        position: relative;
+        width: 200px; /* 조정된 너비 */
         height: 10px;
-        background-color: black; /* HP 바의 배경 (깎인 부분) */
-        border: 1px solid #333; /* 테두리 */
-        top: -3px; /* 캐릭터 위에 위치하도록 조정 */
+        background-color: #0B1C26; /* HP 바의 배경 (깎인 부분) */
+        border-radius: 5px;
+        margin-bottom: 5px;
+        border: 2px solid #695840; /* 테두리 */
+        /* top: -3px; 캐릭터 위에 위치하도록 조정 */
       }
       .hp-bar {
         height: 100%; /* HP 바 높이 */
+        background-color: #0FA697;
+        /* transition: width 1s ease; 1초 동안 부드럽게 */
       }
+      .hp-bar-container .tick {
+        position: absolute;
+        width: 1px;
+        height: 5px;
+        background-color: #fff;
+      }
+       /* 각 tick 위치 설정 */
+      .hp-bar-container .tick:nth-child(1) { left: calc((100 / 613) * 100%); } /* 첫 번째 tick */
+      .hp-bar-container .tick:nth-child(2) { left: calc((200 / 613) * 100%); }
+      .hp-bar-container .tick:nth-child(3) { left: calc((300 / 613) * 100%); }
+      .hp-bar-container .tick:nth-child(4) { left: calc((400 / 613) * 100%); }
+      .hp-bar-container .tick:nth-child(5) { left: calc((500 / 613) * 100%); }
+      .hp-bar-container .tick:nth-child(6) { left: calc((600 / 613) * 100%); }
+
       .img {
         animation: rotate_image 1s linear infinite; /* 1초 동안 회전, 무한 반복 */
         transform-origin: 50% 50%; /* 중앙을 기준으로 회전 */
@@ -644,6 +662,12 @@
           // HP 바 컨테이너 생성
           const hpBarContainer = document.createElement("div");
           hpBarContainer.className = "hp-bar-container";
+          // 100, 200, ..., 600 표시선 추가
+          for (let i = 1; i <= 6; i++) { // 100, 200, ..., 600
+            const tick = document.createElement("div");
+            tick.classList.add("tick");
+            hpBarContainer.appendChild(tick);
+          }
           dom.appendChild(hpBarContainer);
 
           // HP 바 생성
@@ -751,8 +775,11 @@
             }
 
             // HP 바 업데이트
-            const hpPercentage = Math.max(player.hp, 0) + "%";
-            hpBar.style.width = hpPercentage; // 남은 HP 비율만큼 바 너비 변경
+            const maxHp = 613;
+            const clampedHp = Math.min(player.hp, maxHp);
+            const hpPercentage = (clampedHp / maxHp) * 100;
+            hpBar.style.width = `${hpPercentage}%`;
+            progressText.textContent = `${Math.floor(hpPercentage)}%`;
 
             // hp끝나면 화면 종료
             room.send("finishScene");

@@ -39,7 +39,57 @@ export class Player extends Schema {
 
      // 기본 HP 100
     @type("number")
-    hp: number = 100;
+    hp: number = 613;
+
+    @type("number")
+     // 마법 저항력
+    magicResistance: number = 29;
+
+    // 1초당 체력 재생
+    @type("number")
+    regenRate: number = 7;
+
+    // 스킬로 소모한 체력
+    skillCost: number = 50;
+
+    // 실제로 소모된 체력을 저장 (적중 시 회복 용도)
+    actualSkillCost: number = 0;
+
+    // Q 스킬 사용 메서드
+    useQSkill(): void {
+        const prevHp = this.hp;
+        if (this.hp > this.skillCost) {
+            this.hp -= this.skillCost;
+        } else {
+            this.hp = 1;
+        }
+        this.actualSkillCost = prevHp - this.hp; // 실제 소모된 체력을 저장
+    }
+
+    // 데미지 계산 메서드
+    calculateDamage(target: Player): number {
+        const currentHealthPercentDamage = target.hp * 0.2; // 체력의 20%
+        const minimumDamage = 80; // 최소 데미지
+        const rawDamage = Math.max(currentHealthPercentDamage, minimumDamage); // 더 큰 값 선택
+
+        // 마법 저항력 계산
+        const effectiveDamage = rawDamage * (100 / (100 + target.magicResistance));
+        console.log(effectiveDamage);
+        return Math.round(effectiveDamage); // 정수로 반올림
+    }
+
+    // 체력 재생 메서드 (1초마다 호출)
+    regenerateHealth(deltaTime: number) {
+        this.hp += (this.regenRate * deltaTime) / 1000;
+        //console.log(this.hp);
+        this.hp = Math.min(this.hp, 613); // 최대 체력 제한
+    }
+
+    // 적중 시 체력 회복
+    recoverHealth() {
+        this.hp = Math.min(this.hp + this.actualSkillCost, 613); // 실제 소모된 체력만큼 회복
+        this.actualSkillCost = 0; // 회복 후 초기화
+    }
 
     // 승리(1), 패배(2)
     @type("number")
@@ -71,6 +121,12 @@ export class State extends Schema {
     selectButton: number = 0;
 
     something = "This attribute won't be sent to the client-side";
+
+    regeneratePlayersHealth(deltaTime: number) {
+        this.players.forEach(player => {
+            player.regenerateHealth(deltaTime);
+        });
+    }
 
     // 메서드
     // createPlayer: 새로운 플레이어를 상태에 추가
@@ -126,6 +182,9 @@ export class State extends Schema {
 
         const player = this.players.get(sessionId);
         if (player) {
+            // Q 스킬 사용 로직 호출 (체력 감소)
+            player.useQSkill();
+
             const dx = knifeData.targetX - player.x;
             const dy = knifeData.targetY - player.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -184,8 +243,14 @@ export class State extends Schema {
                             playerTop < knifeBottom;
                 
                         if (isCollision) {
-                            otherPlayer.hp -= 10; // HP 감소
+                            const damage = player.calculateDamage(otherPlayer);
+                            otherPlayer.hp -= damage; // HP 감소
                             console.log(`Player ${otherSessionId} hit! HP: ${otherPlayer.hp}`);
+    
+                            // 소모된 체력 회복
+                            player.recoverHealth();
+                            console.log(`Player ${sessionId} recovered ${player.actualSkillCost} health. Current HP: ${player.hp}`);
+    
                             player.knifeActive = false;
                             clearInterval(interval); // 칼의 이동 중단
                         }
@@ -265,7 +330,7 @@ export class StateHandlerRoom extends Room<State> {
 
         // 게임 종료
         this.onMessage("finishScene", (client) => {
-            console.log("Finish game", client.sessionId);
+            // console.log("Finish game", client.sessionId);
             this.state.showFinishScene(client.sessionId);
         })
 

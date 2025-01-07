@@ -6,6 +6,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 const path = require('path');
+const { pbkdf2 } = require('crypto');
 const app = express();
 // Serve static files from the 'Client/public' directory
 app.use(express.static('Client/public'));
@@ -13,6 +14,9 @@ app.use(express.static('Client/public'));
 // Use EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views', 'pages')); // Set views path to 'views/pages'
+
+// Middleware to parse JSON requests
+app.use(express.json());
 
 
 
@@ -37,11 +41,25 @@ const userSchema = new mongoose.Schema({
   email: { type: String },
   photo: { type: String },
   nickname: { type: String, unique: true, required: false },
-  level: { type: Number, default: 1 }
+  wins: { type: Number, default: 0 },  // Track number of wins
+  losses: { type: Number, default: 0 },  // Track number of losses
 });
+
 
 const User = mongoose.model('User', userSchema); // Use User model
 
+
+// Define the schema for the battle records
+const battleRecordSchema = new mongoose.Schema({
+  player1: { type: String, required: true },
+  player2: { type: String, required: true },
+  winner: { type: String, required: true }  // true for win, false for loss
+});
+
+const BattleRecord = mongoose.model('battleRecord', battleRecordSchema);;
+
+
+module.exports = BattleRecord;
 
 //----------------------------------------------------------------------------------------------------  
 // Google OAuth Strategy to authenticate the user
@@ -154,9 +172,7 @@ app.get('/set-nickname', (req, res) => {
 });
 
 //----------------------------------------------------------------------------------------------------
-// Game URL to redirect the user after login
-const gameUrl = 'http://localhost:2567/07-custom-lobby-room.html'; // Replace with the actual game URL
-
+ 
 
 //----------------------------------------------------------------------------------------------------
 // Route to handle the dashboard
@@ -165,11 +181,41 @@ app.get('/dashboard', async (req, res) => {
     return res.redirect('/'); // Redirect to login if not authenticated
   }
 
+
+  // Now get the nickname from the authenticated user
+  const nickname = req.user.nickname;
+  // Game URL to redirect the user after login
+  const gameUrl = 'http://localhost:2567/07-custom-lobby-room.html'; // Replace with the actual game URL
+  //const gameUrl = `${gameServerUrl}/nickname=${encodeURIComponent(nickname)}`;
   // Render the dashboard EJS template and pass the user data
   res.render('dashboard', { user: req.user, gameUrl });
 });
 
+//----------------------------------------------------------------------------------------------------
+// Logout route
+app.get('/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      console.error('Error during logout:', err);
+      return res.status(500).send('Error logging out');
+    }
+    // Clear the session and redirect to Google's logout URL
+    req.session.destroy(() => {
+      res.redirect(`https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=${encodeURIComponent('http://localhost:3000')}`);
+    });
+  });
+});
 
+//----------------------------------------------------------------------------------------------------
+
+// This will be an API endpoint to get the user's nickname
+app.get('/api/user/nickname', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  // Send user data (nickname in this case) as JSON
+  res.json({ nickname: req.user.nickname });
+});
 
 
 
@@ -222,20 +268,7 @@ app.post('/set-nickname', async (req, res) => {
 });
 
 
-//----------------------------------------------------------------------------------------------------
-// Logout route
-app.get('/logout', (req, res) => {
-  req.logout((err) => {
-    if (err) {
-      console.error('Error during logout:', err);
-      return res.status(500).send('Error logging out');
-    }
-    // Clear the session and redirect to Google's logout URL
-    req.session.destroy(() => {
-      res.redirect(`https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=${encodeURIComponent('http://localhost:3000')}`);
-    });
-  });
-});
+
 //----------------------------------------------------------------------------------------------------
 
 
@@ -262,6 +295,72 @@ app.post('/delete-account', async (req, res) => {
     res.status(500).send('Error deleting account');
   }
 });
+
+
+//----------------------------------------------------------------------------------------------------
+// Endpoint to receive battle records
+app.post('/battleRecords', async (req, res) => {
+  const battleRecords = req.body;
+
+  if (Array.isArray(battleRecords)) {
+    // Validate the structure of each battle record
+    for (const record of battleRecords) {
+      if (!record.player1 || !record.player2  || !record.winner) {
+        return res.status(400).json({ message: 'Missing required fields in battle record' });
+      }
+    }
+
+    try {
+      // Iterate over each battle record and update the player's wins or losses
+      for (const record of battleRecords) {
+        const p1 = await User.findOne({ nickname: record.player1 });
+        const p2 = await User.findOne({ nickname: record.player2})
+
+        if (!p1) {
+          return res.status(404).json({ message: `Player with nickname ${record.player1} not found` });
+        }
+        if (!p2) {
+          return res.status(404).json({ message: `Player with nickname ${record.player2} not found` });
+        }
+        // Update the win or loss count
+        if (record.winner === record.player1 ) {
+          p1.wins += 1;  // Increment wins if the player won
+          p2.losses += 1;  
+        } else {
+          p1.losses += 1;  // Increment losses if the player lost
+          p2.wins += 1;
+        }
+
+        // Save updated player info
+        await p1.save();
+        await p2.save();
+      }
+
+      res.status(200).json({ message: 'Battle records received and saved successfully' });
+    } catch (error) {
+      console.error('Error saving battle records:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  } else {
+    res.status(400).json({ message: 'Invalid data format. Expected an array of battle records.' });
+  }
+});
+
+
+app.get('/leaderboard', async (req, res) => {
+  try {
+    // Fetch users sorted by wins in descending order
+    const players = await User.find({}).sort({ wins: -1 });
+
+    // Render the leaderboard.ejs file and pass the data
+    res.render('leaderboard', { players });
+  } catch (error) {
+    console.error('Error fetching leaderboard data:', error);
+    res.status(500).send('Error fetching leaderboard data');
+  }
+});
+
+
 
 
 // Start the server

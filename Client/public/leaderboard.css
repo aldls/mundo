@@ -1,0 +1,20 @@
+#leaderboard {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  #leaderboard li {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  #leaderboard li img {
+    border-radius: 50%;
+    margin-right: 15px;
+  }
+  

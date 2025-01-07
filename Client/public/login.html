@@ -5,6 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to Summoner's Rift</title>
   <link rel="stylesheet" href="/login.css">
+  <button id="play-button">
+    <img id="audio-icon" src="speaker.png" alt="Audio Icon" style="width: 30px; height: 30px;">
+  </button>
+  
+  <audio id="bg-music" src="/loginBGM.mp3" loop></audio>
+  
+  <script>
+    document.getElementById('play-button').addEventListener('click', function() {
+      const audio = document.getElementById('bg-music');
+      const icon = document.getElementById('audio-icon'); // Get the icon element
+  
+      if (audio.paused) {
+        audio.play();
+        icon.src = "muted.png"; // Change icon to muted.png when audio is playing
+      } else {
+        audio.pause();
+        icon.src = "speaker.png"; // Change icon back to speaker.png when audio is paused
+      }
+    });
+  </script>
+  
+  <style>
+    #play-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px;
+      background-color: transparent;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+  
+    #play-button:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+  
+    #play-button img {
+      width: 30px; /* Adjust the size of the icon */
+      height: 30px;
+    }
+  </style>
+  
+  
 </head>
 <body>
   <!-- Left side container (Text Field) -->

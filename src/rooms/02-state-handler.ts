@@ -350,7 +350,7 @@ export class StateHandlerRoom extends Room<State> {
 
         const count = this.clients.length;
         this.broadcast("playerCount", { count });
-        
+
         if (this.clients.length === 0) {
             console.log("No clients left. Starting dispose timeout...");
     

@@ -332,6 +332,68 @@
           opacity: 0;
         }
       }
+
+      /************************************
+      * F 점멸
+      ************************************/
+      #flashContainer {
+        position: absolute;
+        bottom: 20px;
+        left: calc(50% + 150px); /* Q 스킬보다 오른쪽으로 150px 정도 옮김 */
+        transform: translateX(-50%);
+        width: 128px;
+        height: 128px;
+        border: 8px solid #A09B8C;
+        border-radius: 50%;
+        box-sizing: border-box;
+        z-index: 2000;
+      }
+
+      #flashIcon {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: block;
+      }
+
+      #flashOverlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        border-radius: 50%;
+        pointer-events: none;
+        display: none;
+      }
+
+      #flashText {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        pointer-events: none;
+      }
+
+      #flashKey {
+        position: absolute;
+        bottom: 4px; left: 4px;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        pointer-events: none;
+        text-shadow: 1px 1px 2px black;
+      }
+      .flash-gold {
+        animation: flashGold 0.15s;
+      }
+
+      @keyframes flashGold {
+        0% { filter: brightness(100%); }
+        50% { filter: brightness(250%); } /* 밝게 -> 다시 원상태 */
+        100% { filter: brightness(100%); }
+      }
+
     </style>
   </head>
   <body>
@@ -393,6 +455,13 @@
           <img src="skill_detail.png" alt="스킬 툴팁 이미지">
         </div>
       </div>
+        <!-- F (flash) 스킬 아이콘 -->
+      <div id="flashContainer">
+        <img id="flashIcon" src="flash.jpg" alt="flash"/>
+        <div id="flashOverlay"></div>
+        <div id="flashText"></div>
+        <div id="flashKey">F</div>
+      </div>
 
     </div>  
 
@@ -444,6 +513,10 @@
       // 페이지 로드 시 로비 화면 표시
       lobbyContainer.style.display = "block";
       countdownContainer.style.display = "none";
+
+      // 점멸 사운드
+      const flashSound = new Audio("flashSound.mp3"); 
+      flashSound.volume = 0.8; // 볼륨 조정 등
 
       // 방 참여
       function joinRoom(roomId) {
@@ -537,7 +610,27 @@
           window.addEventListener('resize', animate);
 
           player.onChange(() => {
-            requestAnimationFrame(animate);
+            // 점멸 여부 체크
+            if (player.teleport) {
+              // 즉시 갱신
+              currentX = player.x;
+              currentY = player.y;
+              dom.style.left = `${currentX}px`;
+              dom.style.top = `${currentY}px`;
+
+              // 황금빛 깜빡임(섬광)
+              // CSS 클래스 추가 또는 인라인 스타일로 잠깐 색상 변경
+              dom.classList.add("flash-gold");
+              setTimeout(() => {
+                dom.classList.remove("flash-gold");
+              }, 150); // 0.15초 정도 깜빡임
+
+              // teleport 플래그를 false로 (이후 이동은 정상 애니메이션)
+              player.teleport = false;
+            } else {
+              // 평소 이동은 부드러운 애니메이션
+              requestAnimationFrame(animate);
+            }
 
             // HP
             const hpPercent = Math.max(player.hp, 0) + "%";
@@ -696,6 +789,101 @@
             gogoEffect.style.display = "none";
           }, 800); // 애니메이션과 동일한 시간 설정
         });
+
+        // flashEffect 수신 -> 모든 클라이언트가 twinkle.png 효과 표시
+        room.onMessage("flashEffect", (data) => {
+          const { sessionId, fromX, fromY, toX, toY } = data;
+
+          // 1) from 지점에 twinkle.png
+          showTwinkleEffect(fromX, fromY);
+
+          // 2) to 지점에도 twinkle.png
+          showTwinkleEffect(toX, toY);
+
+          // 3) 사운드 재생 (모두가 들을지, 본인만 들을지는 기획에 맞춰 결정)
+          flashSound.currentTime = 0;
+          flashSound.play().catch(e => console.log("Audio play interrupted:", e));
+        });
+
+        // ... 플레이어 onAdd, onRemove, throwKnife, etc. 생략 ...
+
+        //  f 키 -> flash 사용
+        let canFlash = true;
+        const flashCooldown = 300; // 300초 (5분)
+
+        window.addEventListener("keydown", (e) => {
+          if (isChatOpen) return;  // 채팅창 열려있으면 스킬 막음
+
+          // f 키
+          if (e.key === 'f' && canFlash) {
+            // 서버로 "flash" 메시지 전송
+            room.send("flash", { targetX: mouseX, targetY: mouseY });
+
+            // 쿨타임 시작
+            startFlashCooldown(flashCooldown);
+          }
+        });
+
+        const flashContainer = document.getElementById("flashContainer");
+        const flashOverlay   = document.getElementById("flashOverlay");
+        const flashText      = document.getElementById("flashText");
+
+        /**
+         * f 스킬(점멸) 쿨타임 UI
+         * @param {number} totalSeconds - 300초
+         */
+        function startFlashCooldown(totalSeconds) {
+          canFlash = false;
+          flashContainer.style.borderColor = "#1E282D"; // 쿨타임 동안 테두리 색상 변경
+
+          // 쿨타임 오버레이 초기화 (파이 전체 채움 상태)
+          flashOverlay.style.display = "block";
+          flashOverlay.style.background = "conic-gradient(#053959 0deg, #053959 360deg)";
+
+          let timeLeft = totalSeconds;
+          flashText.textContent = Math.ceil(timeLeft);
+
+          const interval = setInterval(() => {
+            timeLeft -= 0.1;
+            if (timeLeft <= 0) {
+              clearInterval(interval);
+              flashText.textContent = "";
+              flashOverlay.style.background = "none";
+              flashOverlay.style.display = "none";
+              flashContainer.style.borderColor = "#A09B8C"; 
+              canFlash = true;
+              return;
+            }
+
+            // 0 → 360도로 줄어드는 애니메이션
+            const angle = (timeLeft / totalSeconds) * 360;
+            const temp_angle = 360 - angle;
+            flashOverlay.style.background =
+              `conic-gradient(transparent 0deg, transparent ${temp_angle}deg, #053959 ${temp_angle}deg, #053959 360deg)`;
+
+            flashText.textContent = Math.ceil(timeLeft);
+          }, 100);
+        }
+
+        // twinkle.png 이펙트 표시 함수
+        function showTwinkleEffect(x, y) {
+          const twinkle = document.createElement("img");
+          twinkle.src = "twinkle.png";
+          twinkle.style.position = "absolute";
+          twinkle.style.width = "100px";
+          twinkle.style.height = "100px";
+          twinkle.style.left = `${x - 30}px`;
+          twinkle.style.top = `${y - 30}px`;
+          twinkle.style.pointerEvents = "none";
+          twinkle.style.animation = "fadeOut 0.8s forwards";
+
+          gameContainer.appendChild(twinkle);
+
+          // 0.8초 후 자동 제거
+          setTimeout(() => {
+            gameContainer.removeChild(twinkle);
+          }, 800);
+        }
       }
 
       // 채팅 메시지 표시 함수

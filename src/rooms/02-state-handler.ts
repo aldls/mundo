@@ -44,6 +44,10 @@ export class Player extends Schema {
     // 승리(1), 패배(2)
     @type("number")
     victoryNum: number = 0;
+
+    // 점멸 여부 판단용
+    @type("boolean")
+    teleport: boolean = false;
 }
 
 // State 클래스
@@ -266,6 +270,10 @@ export class StateHandlerRoom extends Room<State> {
             });
         });
 
+        // F 키 점멸 (flash) 메시지 처리
+        this.onMessage("flash", (client, data: { targetX: number, targetY: number }) => {
+            this.handleFlash(client, data);
+        });
     }
 
     // onAuth(client, options, req) {
@@ -339,4 +347,51 @@ export class StateHandlerRoom extends Room<State> {
         console.log("Dispose StateHandlerRoom");
     }
 
+    /**
+     * f 키 점멸 (순간이동) 처리
+     */
+    private handleFlash(client: Client, data: { targetX: number; targetY: number }) {
+        if (this.state.gameState !== GameState.PLAYING) return;
+
+        const player = this.state.players.get(client.sessionId);
+        if (!player) return;
+
+        // 최대 사거리 설정
+        const FLASH_RANGE = 300;
+
+        const startX = player.x;
+        const startY = player.y;
+
+        const dx = data.targetX - startX;
+        const dy = data.targetY - startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 사거리 초과 시 보정
+        let finalX = data.targetX;
+        let finalY = data.targetY;
+        if (dist > FLASH_RANGE) {
+            const ratio = FLASH_RANGE / dist;
+            finalX = startX + dx * ratio;
+            finalY = startY + dy * ratio;
+        }
+
+        // 실제 좌표 갱신
+        player.x = finalX;
+        player.y = finalY;
+        // targetX, targetY도 순간이동된 상태로 맞춰줌
+        player.targetX = finalX;
+        player.targetY = finalY;
+
+        // "이번 이동은 순간이동이다" 라는 플래그
+        player.teleport = true;
+
+        // 모든 클라이언트에게 이펙트/사운드 안내
+        this.broadcast("flashEffect", {
+            sessionId: client.sessionId,
+            fromX: startX,
+            fromY: startY,
+            toX: finalX,
+            toY: finalY
+        });
+    }
 }

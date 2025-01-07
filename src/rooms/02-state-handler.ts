@@ -344,7 +344,7 @@ export class StateHandlerRoom extends Room<State> {
         console.log("StateHandlerRoom created!", options);
 
         // this.setState(new State()): 새로운 상태 인스턴스를 생성하여 방의 상태로 설정.
-        this.setState(new State());
+        // this.setState(new State());
         const centerX = 1025; // Center x of the circle
         const centerY = 450; // Center y of the circle
         const radius = 260; // Radius of the circle
@@ -406,7 +406,7 @@ export class StateHandlerRoom extends Room<State> {
             console.log("Restart game");
             const player = this.state.players.get(client.sessionId);
             this.state.players.forEach((player) =>{
-                player.hp = 100;
+                player.hp = 613;
                 player.victoryNum = 0;
             });
             // this.state.gameState = GameState.WAITING;

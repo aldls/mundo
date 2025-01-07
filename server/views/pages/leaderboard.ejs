@@ -4,50 +4,52 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      display: flex;
-      align-items: center;
-      background: #fff;
-      margin: 10px 0;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    img {
-      border-radius: 50%;
-      margin-right: 15px;
-    }
-    .info {
-      flex: 1;
-    }
-  </style>
+  <link rel="stylesheet" href="/leaderboard.css">
 </head>
 <body>
-  <h1>Leaderboard</h1>
-  <ul>
-    <% players.forEach((player, index) => { %>
-        <td><%= index + 1 %></td> <!-- Rank -->
-        <li>
-        <img src="<%= player.photo %>" alt="<%= player.displayName %>" width="50" height="50">
-        <div class="info">
-          <strong><%= player.nickname %></strong> 승리: <%= player.wins %> 패배: <%= player.losses %>
-        </div>
-      </li>
-    <% }); %>
-  </ul>
+  <!-- Replace h1 with image -->
+  <img src="leaderboard.png" alt="Leaderboard" class="leaderboard-logo" />
+
+
+  <!-- Sorting Buttons -->
+  <div class="sorting-buttons">
+    <button onclick="sortLeaderboard('wins', 'desc')">승리</button>
+    <button onclick="sortLeaderboard('winrate', 'desc')">승률</button>
+    <button onclick="sortLeaderboard('losses', 'asc')">패배</button>
+    <button onclick="sortLeaderboard('nickname', 'desc')">닉네임(오름차순)</button>
+    <button onclick="sortLeaderboard('nickname', 'asc')">닉네임(내림차순)</button>
+  </div>
+
+  <!-- Leaderboard Table -->
+  <table>
+    <thead>
+      <tr>
+        <th>순위</th>
+        <th>닉네임</th>
+        <th>승리</th>
+        <th>패배</th>
+        <th>승률</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% players.forEach((player, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= player.nickname %></td>
+          <td><%= player.wins %></td>
+          <td><%= player.losses %></td>
+          <td><%= Math.round((player.wins / (player.losses + player.wins)) * 100) / 100 %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <script>
+    // JavaScript function to trigger sorting
+    function sortLeaderboard(field, order) {
+      const url = `/leaderboard?sortBy=${field}&order=${order}`;
+      window.location.href = url; // Navigate to the sorted leaderboard
+    }
+  </script>
 </body>
 </html>

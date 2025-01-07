@@ -53,7 +53,7 @@ const User = mongoose.model('User', userSchema); // Use User model
 const battleRecordSchema = new mongoose.Schema({
   player1: { type: String, required: true },
   player2: { type: String, required: true },
-  winner: { type: String, required: true }  // true for win, false for loss
+  winner: { type: String, required: true }  
 });
 
 const BattleRecord = mongoose.model('battleRecord', battleRecordSchema);;
@@ -185,8 +185,8 @@ app.get('/dashboard', async (req, res) => {
   // Now get the nickname from the authenticated user
   const nickname = req.user.nickname;
   // Game URL to redirect the user after login
-  const gameUrl = 'http://localhost:2567/07-custom-lobby-room.html'; // Replace with the actual game URL
-  //const gameUrl = `${gameServerUrl}/nickname=${encodeURIComponent(nickname)}`;
+  const gameServerUrl = 'http://localhost:2567/07-custom-lobby-room.html'; // Replace with the actual game URL
+  const gameUrl = `${gameServerUrl}?nickname=${encodeURIComponent(nickname)}`;
   // Render the dashboard EJS template and pass the user data
   res.render('dashboard', { user: req.user, gameUrl });
 });
@@ -349,16 +349,32 @@ app.post('/battleRecords', async (req, res) => {
 
 app.get('/leaderboard', async (req, res) => {
   try {
-    // Fetch users sorted by wins in descending order
-    const players = await User.find({}).sort({ wins: -1 });
+    // Extract sort field and order from query parameters (default to sorting by wins in descending order)
+    const sortBy = req.query.sortBy || 'wins';  // Default sort by wins
+    const order = req.query.order === 'desc' ? -1 : 1;  // Default to ascending (1) or descending (-1)
 
-    // Render the leaderboard.ejs file and pass the data
-    res.render('leaderboard', { players });
+    let sortedData;
+
+    // Sorting based on the provided field and order
+    if (sortBy === 'winrate') {
+      // To sort by winrate, we'll need to sort by wins and losses in combination
+      sortedData = await User.find({})
+        .sort({ winrate: order}); // This sorts primarily by wins and secondarily by losses
+    } else if (sortBy === 'nickname') {
+      sortedData = await User.find({}).sort({ nickname: order });
+    } else {
+      // Sort by wins or losses
+      sortedData = await User.find({}).sort({ [sortBy]: order });
+    }
+
+    // Render the leaderboard with the sorted data
+    res.render('leaderboard', { players: sortedData });
   } catch (error) {
     console.error('Error fetching leaderboard data:', error);
     res.status(500).send('Error fetching leaderboard data');
   }
 });
+
 
 
 

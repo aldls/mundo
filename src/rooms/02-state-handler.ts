@@ -44,6 +44,14 @@ export class Player extends Schema {
     // 승리(1), 패배(2)
     @type("number")
     victoryNum: number = 0;
+
+    //각자 준비상태 확인(다시 시작에 사용)
+    @type("boolean")
+    ready: boolean = false;
+
+    // 점멸 여부 판단용
+    @type("boolean")
+    teleport: boolean = false;
 }
 
 // State 클래스
@@ -57,10 +65,8 @@ export class State extends Schema {
     // 게임 상태
     @type("string")
     gameState: GameState = GameState.WAITING; // 초기엔 WAITING
-
     @type("boolean")
     gameOver: boolean = false;
-
     @type("number")
     selectButton: number = 0;
 
@@ -263,14 +269,16 @@ export class StateHandlerRoom extends Room<State> {
             this.state.showFinishScene(client.sessionId);
         })
 
-        //게임 다시 시작하기기
+        //게임 다시 시작하기
         this.onMessage("restartGame", (client) => {
             console.log("Restart game");
+            const player = this.state.players.get(client.sessionId);
             this.state.players.forEach((player) =>{
                 player.hp = 100;
                 player.victoryNum = 0;
             });
-            this.state.selectButton = 0;
+            // this.state.gameState = GameState.WAITING;
+            // this.state.selectButton = 0;
             this.state.gameOver = false;
         })
 
@@ -280,6 +288,7 @@ export class StateHandlerRoom extends Room<State> {
             console.log("Select button");
             this.state.selectButton += 1;
         })
+
 
         // Chatting
         this.onMessage("chat", (client, text: string) => {
@@ -293,6 +302,11 @@ export class StateHandlerRoom extends Room<State> {
                 nickname: nickname,
                 text: text,
             });
+        });
+
+        // F 키 점멸 (flash) 메시지 처리
+        this.onMessage("flash", (client, data: { targetX: number, targetY: number }) => {
+            this.handleFlash(client, data);
         });
     }
 
@@ -314,8 +328,14 @@ export class StateHandlerRoom extends Room<State> {
         // 모든 클라이언트에게 playerCount 메시지 전송
         this.broadcast("playerCount", { count });
 
+        if(this.clients.length === this.maxClients && this.state.selectButton === 1){
+            this.state.gameState = GameState.WAITING;
+            this.broadcast("gameState", { state: "WAITING" });
+        }
         // 만약 maxClients == 현재 접속 클라이언트 수 == 2라면 -> 카운트다운 시작
-        if (this.clients.length === this.maxClients && this.state.gameState === "WAITING") {
+        else if (this.clients.length === this.maxClients && this.state.gameState === "WAITING" && (this.state.selectButton === 0 || this.state.selectButton === 2)) {
+            console.log("저기 들어가게 해")
+            this.state.selectButton = 0;
             this.state.gameState = GameState.COUNTDOWN;
 
             // 모든 클라이언트에게 COUNTDOWN 상태 전송
@@ -365,6 +385,54 @@ export class StateHandlerRoom extends Room<State> {
     // onDispose: 방이 폐기될 때 호출. 로그를 출력.
     onDispose () {
         console.log("Dispose StateHandlerRoom");
+    }
+
+    /**
+     * f 키 점멸 (순간이동) 처리
+     */
+    private handleFlash(client: Client, data: { targetX: number; targetY: number }) {
+        if (this.state.gameState !== GameState.PLAYING) return;
+
+        const player = this.state.players.get(client.sessionId);
+        if (!player) return;
+
+        // 최대 사거리 설정
+        const FLASH_RANGE = 300;
+
+        const startX = player.x;
+        const startY = player.y;
+
+        const dx = data.targetX - startX;
+        const dy = data.targetY - startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 사거리 초과 시 보정
+        let finalX = data.targetX;
+        let finalY = data.targetY;
+        if (dist > FLASH_RANGE) {
+            const ratio = FLASH_RANGE / dist;
+            finalX = startX + dx * ratio;
+            finalY = startY + dy * ratio;
+        }
+
+        // 실제 좌표 갱신
+        player.x = finalX;
+        player.y = finalY;
+        // targetX, targetY도 순간이동된 상태로 맞춰줌
+        player.targetX = finalX;
+        player.targetY = finalY;
+
+        // "이번 이동은 순간이동이다" 라는 플래그
+        player.teleport = true;
+
+        // 모든 클라이언트에게 이펙트/사운드 안내
+        this.broadcast("flashEffect", {
+            sessionId: client.sessionId,
+            fromX: startX,
+            fromY: startY,
+            toX: finalX,
+            toY: finalY
+        });
     }
 
 }

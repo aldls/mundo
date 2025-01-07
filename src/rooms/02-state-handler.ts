@@ -61,6 +61,9 @@ export class State extends Schema {
     @type("boolean")
     gameOver: boolean = false;
 
+    @type("number")
+    selectButton: number = 0;
+
     something = "This attribute won't be sent to the client-side";
 
     // 메서드

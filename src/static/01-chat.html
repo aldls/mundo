@@ -595,10 +595,12 @@
               restartButton.innerText = "Play Again";
               restartButton.className = "restart-button";
               restartButton.onclick = () => {
-           
-                room.send("restartGame"); //서버도 리셋
-                window.location.href = originalUrl;
-                
+                room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
+                if(room.state.selectButton === 2){
+                  room.send("restartGame"); //서버도 리셋
+                  // location.reload(); // 페이지 새로고침으로 게임 재시작
+                  window.location.href = originalUrl;
+                }
               };
               buttonContainer.appendChild(restartButton);
 
@@ -606,6 +608,7 @@
               lobbyButton.innerText = "Back Lobby";
               lobbyButton.className = "lobby-button";
               lobbyButton.onclick = () => {
+                room.send("buttonClicked"); //양쪽 다 선택했는지 확인인
                 window.location.href = "/07-custom-lobby-room.html";
               };
               buttonContainer.appendChild(lobbyButton);

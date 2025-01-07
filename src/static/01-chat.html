@@ -338,14 +338,13 @@
       // URL에서 roomId 추출
       const urlParams = new URLSearchParams(window.location.search);
       const roomId = urlParams.get('roomId');
+      const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
 
       // url 짧게 만들기(닉네임 안 보임)
-      // reload할 때 문제가 있어서 다시 확인해야 할 듯
       const originalUrl = window.location.href;
       const shortUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({ originalUrl }, document.title, shortUrl);
 
-      const nickname = urlParams.get('nickname') || "익명"; // 닉네임 기본값 설정
       let room;
       let isChatOpen = false;   // 채팅 입력창이 열려 있는지 여부
 

@@ -28,6 +28,13 @@
         font-size: 32px;
       }
 
+      .nickname-display {
+        text-align: center;
+        margin: 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+      }
+
       .buttons {
         text-align: center;
         margin-top: 10px;
@@ -197,9 +204,7 @@
         <button onclick="refreshRooms()"></button>
       </div>
 
-      <div class="nickname-container">
-        <input type="text" id="nickname" placeholder="닉네임 입력" />
-      </div>
+      <div id="nickname-display" class="nickname-display"></div>
 
       <!-- **Create Room 버튼 추가** -->
       <button class="create-room-button" onclick="createRoom()">Create Room</button>
@@ -210,6 +215,22 @@
       <div id="message" class="message"></div>
 
       <script>
+        function getQueryParameter(name) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(name);
+        }
+
+        window.onload = function () {
+          join(); // 기존 join 로직 실행
+        };
+
+        const nickname = getQueryParameter("nickname");
+        if (nickname) {
+            document.getElementById("nickname-display").innerText = `닉네임: ${decodeURIComponent(nickname)}`;
+        } else {
+          document.getElementById("nickname-display").innerText = "닉네임을 찾을 수 없습니다.";
+        }
+
         var host = window.document.location.host.replace(/:.*/, '');
         var client = new Colyseus.Client(
           location.protocol.replace("http", "ws") +
@@ -219,10 +240,6 @@
         );
         var lobby;
         var allRooms = [];
-
-        window.onload = function () {
-          join();
-        };
 
         const originalUrl = window.location.href;
         const shortUrl = window.location.origin + window.location.pathname;
@@ -297,14 +314,13 @@
 
         // 특정 roomId로 리다이렉트
         function redirectToRoom(roomId) {
-          const nickname = document.getElementById("nickname").value.trim() || "익명";
+          const nickname = document.getElementById("nickname-display").innerText.replace("닉네임: ", "").trim();
           window.location.href = `01-chat.html?roomId=${roomId}&nickname=${encodeURIComponent(nickname)}`;
         }
 
         // **Create Room 함수 추가**
         function createRoom() {
-          const nicknameInput = document.getElementById("nickname");
-          const nickname = nicknameInput.value.trim();
+          const nickname = document.getElementById("nickname-display").innerText.replace("닉네임: ", "").trim();
 
           if (!nickname) {
             alert("닉네임을 입력해주세요.");

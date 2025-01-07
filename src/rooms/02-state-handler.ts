@@ -1,6 +1,7 @@
 // 필요한 모듈 임포트
 import { Room, Client } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
+import axios from 'axios';
 
 // 게임 상태 정의
 enum GameState {
@@ -122,6 +123,26 @@ export class State extends Schema {
 
     something = "This attribute won't be sent to the client-side";
 
+
+    // (1) onGameOverCallback 타입 정의 (콜백 함수):
+    //     winnerNickname, loserNickname, 전체 players를 넘겨줌
+    private onGameOverCallback: (
+        winnerNickname: string,
+        loserNickname: string,
+        allPlayers: MapSchema<Player>
+    ) => void;
+
+    constructor(
+        onGameOverCallback: (
+            winnerNickname: string,
+            loserNickname: string,
+            allPlayers: MapSchema<Player>
+        ) => void
+    ) {
+        super();
+        this.onGameOverCallback = onGameOverCallback;
+    }
+
     regeneratePlayersHealth(deltaTime: number) {
         this.players.forEach(player => {
             player.regenerateHealth(deltaTime);
@@ -181,84 +202,101 @@ export class State extends Schema {
         if (this.gameState !== GameState.PLAYING) return;
 
         const player = this.players.get(sessionId);
-        if (player) {
-            // Q 스킬 사용 로직 호출 (체력 감소)
-            player.useQSkill();
+        if (!player) return;
 
-            const dx = knifeData.targetX - player.x;
-            const dy = knifeData.targetY - player.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-    
-            if (distance === 0) return; // Avoid division by zero
+        // Q 스킬 사용 로직 호출 (체력 감소)
+        player.useQSkill();
 
-            const unitX = dx / distance;
-            const unitY = dy / distance;
-    
-            player.knifeX = player.x;
-            player.knifeY = player.y;
-            player.knifeActive = true;
-    
-            const maxDistance = 500;
-            const speed = 10;
-            let traveledDistance = 0;
-    
-            const interval = setInterval(() => {
-                if (!player.knifeActive || traveledDistance >= maxDistance) {
-                    player.knifeActive = false;
-                    clearInterval(interval);
-                    return;
-                }
-    
-                player.knifeX += unitX * speed;
-                player.knifeY += unitY * speed;
-                traveledDistance += speed;
-    
-                // 충돌 판정
-                this.players.forEach((otherPlayer, otherSessionId) => {
-                    if (otherSessionId !== sessionId && otherPlayer.hp > 0) {
-                        // 캐릭터의 경계 박스 계산
-                        const playerHalfWidth = 50; // 캐릭터 크기 100px의 절반
-                        const playerHalfHeight = 50;
-                
-                        const playerLeft = otherPlayer.x - playerHalfWidth;
-                        const playerRight = otherPlayer.x + playerHalfWidth;
-                        const playerTop = otherPlayer.y - playerHalfHeight;
-                        const playerBottom = otherPlayer.y + playerHalfHeight;
-                
-                        // 칼의 경계 박스 계산
-                        // 칼 크기 30px의 절반이 테두리긴 한데 조금 더 들어와야 될듯
-                        const knifeHalfWidth = 5; 
-                        const knifeHalfHeight = 5;
-                
-                        const knifeLeft = player.knifeX - knifeHalfWidth;
-                        const knifeRight = player.knifeX + knifeHalfWidth;
-                        const knifeTop = player.knifeY - knifeHalfHeight;
-                        const knifeBottom = player.knifeY + knifeHalfHeight;
-                
-                        // AABB 충돌 판정
-                        const isCollision = 
-                            playerRight > knifeLeft &&
-                            playerLeft < knifeRight &&
-                            playerBottom > knifeTop &&
-                            playerTop < knifeBottom;
-                
-                        if (isCollision) {
-                            const damage = player.calculateDamage(otherPlayer);
-                            otherPlayer.hp -= damage; // HP 감소
-                            console.log(`Player ${otherSessionId} hit! HP: ${otherPlayer.hp}`);
-    
-                            // 소모된 체력 회복
-                            player.recoverHealth();
-                            console.log(`Player ${sessionId} recovered ${player.actualSkillCost} health. Current HP: ${player.hp}`);
-    
-                            player.knifeActive = false;
-                            clearInterval(interval); // 칼의 이동 중단
+        const dx = knifeData.targetX - player.x;
+        const dy = knifeData.targetY - player.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) return; // Avoid division by zero
+
+        const unitX = dx / distance;
+        const unitY = dy / distance;
+
+        player.knifeX = player.x;
+        player.knifeY = player.y;
+        player.knifeActive = true;
+
+        const maxDistance = 500;
+        const speed = 10;
+        let traveledDistance = 0;
+
+        const interval = setInterval(() => {
+            if (!player.knifeActive || traveledDistance >= maxDistance) {
+                player.knifeActive = false;
+                clearInterval(interval);
+                return;
+            }
+
+            player.knifeX += unitX * speed;
+            player.knifeY += unitY * speed;
+            traveledDistance += speed;
+
+            // 충돌 판정
+            this.players.forEach((otherPlayer, otherSessionId) => {
+                if (otherSessionId !== sessionId && otherPlayer.hp > 0) {
+                    // 캐릭터의 경계 박스 계산
+                    const playerHalfWidth = 50; // 캐릭터 크기 100px의 절반
+                    const playerHalfHeight = 50;
+            
+                    const playerLeft = otherPlayer.x - playerHalfWidth;
+                    const playerRight = otherPlayer.x + playerHalfWidth;
+                    const playerTop = otherPlayer.y - playerHalfHeight;
+                    const playerBottom = otherPlayer.y + playerHalfHeight;
+            
+                    // 칼의 경계 박스 계산
+                    // 칼 크기 30px의 절반이 테두리긴 한데 조금 더 들어와야 될듯
+                    const knifeHalfWidth = 5; 
+                    const knifeHalfHeight = 5;
+            
+                    const knifeLeft = player.knifeX - knifeHalfWidth;
+                    const knifeRight = player.knifeX + knifeHalfWidth;
+                    const knifeTop = player.knifeY - knifeHalfHeight;
+                    const knifeBottom = player.knifeY + knifeHalfHeight;
+            
+                    // AABB 충돌 판정
+                    const isCollision = 
+                        playerRight > knifeLeft &&
+                        playerLeft < knifeRight &&
+                        playerBottom > knifeTop &&
+                        playerTop < knifeBottom;
+            
+                    if (isCollision) {
+                        const damage = player.calculateDamage(otherPlayer);
+                        otherPlayer.hp -= damage; // HP 감소
+                        console.log(`Player ${otherSessionId} hit! HP: ${otherPlayer.hp}`);
+
+                        // 소모된 체력 회복
+                        player.recoverHealth();
+                        console.log(`Player ${sessionId} recovered ${player.actualSkillCost} health. Current HP: ${player.hp}`);
+
+                        player.knifeActive = false;
+                        clearInterval(interval); // 칼의 이동 중단
+
+                        // 만약 otherPlayer의 hp가 0 이하가 되었다면 => 게임 오버 처리
+                        if (otherPlayer.hp <= 0) {
+                            this.gameOver = true;
+
+                            // 승자 / 패자 닉네임
+                            const winnerNickname = player.nickname;
+                            const loserNickname = otherPlayer.nickname;
+
+                            // 여기서 콜백 호출!
+                            this.onGameOverCallback(
+                                winnerNickname,
+                                loserNickname,
+                                this.players
+                            );
                         }
                     }
-                });
-            }, 16);
-        }
+                }
+            });
+        }, 16);
     }    
+
     // 게임 끝났을 때 승리, 패배 화면 보여주기
     showFinishScene(sessionId: string) {
         // console.log("??????????????");
@@ -305,8 +343,15 @@ export class StateHandlerRoom extends Room<State> {
     onCreate (options) {
         console.log("StateHandlerRoom created!", options);
 
-        // this.setState(new State()): 새로운 상태 인스턴스를 생성하여 방의 상태로 설정.
-        this.setState(new State());
+        // (1) State 인스턴스 생성 시, "onGameOverCallback" 콜백을 넘겨준다.
+        //     => 누가 승리했는지 알게 되면 이 콜백을 호출하도록 State를 설정
+        const newState = new State((winnerNickname, loserNickname, allPlayers) => {
+            // 이 콜백은 State에서 hp <= 0 판정이 났을 때 불린다.
+            // ⇒ 여기서 axios POST를 날리면 됨
+            this.sendBattleRecord(winnerNickname, loserNickname, allPlayers);
+        });
+        
+        this.setState(newState);
 
         // 우클릭 움직임 메시지 처리
         this.onMessage("moveTo", (client, data) => {
@@ -449,6 +494,7 @@ export class StateHandlerRoom extends Room<State> {
 
     // onDispose: 방이 폐기될 때 호출. 로그를 출력.
     onDispose () {
+        // await this.checkServer();
         console.log("Dispose StateHandlerRoom");
     }
 
@@ -500,4 +546,67 @@ export class StateHandlerRoom extends Room<State> {
         });
     }
 
+
+    // 실제로 battleRecords로 POST를 날리는 메서드
+    private sendBattleRecord(
+        winnerNickname: string, 
+        loserNickname: string, 
+        allPlayers: Map<string, any> // 혹은 Player 타입의 Map
+    ) {
+        // 예: 두 플레이어라고 가정
+        const playersArray = Array.from(allPlayers.values());
+        if (playersArray.length < 2) {
+            console.log("Not enough players to send record.");
+            return;
+        }
+
+        // player1, player2 결정
+        // (방 안에 두 명만 있다고 가정)
+        const p1Nickname = playersArray[0].nickname;
+        const p2Nickname = playersArray[1].nickname;
+
+        const data = {
+            player1: p1Nickname,
+            player2: p2Nickname,
+            winner: winnerNickname
+        };
+
+        console.log("Sending battle record => ", data);
+
+        axios.post("http://localhost:3000/battleRecords", data)
+            .then(res => {
+                console.log("[BattleRecord] status:", res.status);
+                console.log("[BattleRecord] data:", res.data);
+            })
+            .catch(err => {
+                if (err.response) {
+                    console.error("[BattleRecord] error status:", err.response.status);
+                    console.error("[BattleRecord] error data:", err.response.data);
+                } else {
+                    console.error("[BattleRecord] error:", err.message);
+                }
+            });
+        }
+
+    // 예시
+    // private async checkServer() {
+    //     const uri = "http://localhost:3000/checking";
+        
+    //     try {
+    //         // POST 요청 (데이터 없이)
+    //         const response = await axios.post(uri);
+            
+    //         // 응답 출력
+    //         console.log("Response status:", response.status); // HTTP 상태 코드
+    //         console.log("Response data:", response.data); // 응답 본문
+    //     } catch (error) {
+    //         // 에러 처리
+    //         if (error.response) {
+    //             console.error("Error response status:", error.response.status);
+    //             console.error("Error response data:", error.response.data);
+    //         } else {
+    //             console.error("Error sending POST request:", error.message);
+    //         }
+    //     }
+    // }
 }

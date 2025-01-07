@@ -792,7 +792,7 @@
               gameContainer.appendChild(victoryContainer);
 
               const victoryVideo = document.createElement("img");
-              victoryVideo.src = "victory.gif"; 
+              victoryVideo.src = "victory00.gif"; 
               victoryVideo.className = "victory-screen";
               victoryContainer.appendChild(victoryVideo);
 
@@ -805,11 +805,6 @@
               restartButton.className = "restart-button";
               restartButton.onclick = () => {
                 room.send("buttonClicked"); //양쪽 다 버튼 선택했는지 확인(다시 시작 or 로비)
-                // if(room.state.selectButton === 2){
-                //   room.send("restartGame"); //서버도 리셋
-                //   // location.reload(); // 페이지 새로고침으로 게임 재시작
-                //   window.location.href = originalUrl;
-                // }
                 room.send("restartGame"); //서버도 리셋
                 window.location.href = originalUrl;
               };
@@ -818,9 +813,10 @@
               const lobbyButton = document.createElement("button");
               lobbyButton.innerText = "Back Lobby";
               lobbyButton.className = "lobby-button";
+              const nickname = room.state.players[room.sessionId].nickname;
               lobbyButton.onclick = () => {
                 room.send("buttonClicked"); //양쪽 다 선택했는지 확인
-                window.location.href = "/07-custom-lobby-room.html";
+                window.location.href = `/07-custom-lobby-room.html?nickname=${encodeURIComponent(nickname)}`;
               };
               buttonContainer.appendChild(lobbyButton);
             } 
@@ -833,7 +829,7 @@
               gameContainer.appendChild(defeatContainer);
 
               const defeatVideo = document.createElement("img");
-              defeatVideo.src = "defeat1.gif";
+              defeatVideo.src = "defeat000.gif";
               defeatVideo.className = "victory-screen";
               defeatContainer.appendChild(defeatVideo);
 
@@ -856,7 +852,7 @@
               lobbyButton.className = "lobby-button";
               lobbyButton.onclick = () => {
                 room.send("buttonClicked"); //양쪽 다 선택했는지 확인
-                window.location.href = "/07-custom-lobby-room.html";
+                window.location.href = `/07-custom-lobby-room.html?nickname=${encodeURIComponent(nickname)}`;
               };
               buttonContainer.appendChild(lobbyButton);
             }

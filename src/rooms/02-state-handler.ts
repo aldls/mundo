@@ -299,7 +299,6 @@ export class State extends Schema {
 
     // 게임 끝났을 때 승리, 패배 화면 보여주기
     showFinishScene(sessionId: string) {
-        // console.log("??????????????");
         const player = this.players.get(sessionId);
         if(!player) return;
 
@@ -317,12 +316,11 @@ export class State extends Schema {
 
         if (player.hp > 0 && someoneDefeated) {
             player.victoryNum = 1; // Player wins
-            console.log(player.victoryNum);
             this.gameOver = true;
             return;
         } else if (player.hp <= 0) {
+            player.hp = -20000;
             player.victoryNum = 2; // Player loses
-            console.log(player.victoryNum);
             this.gameOver = true;
             return;
         }
@@ -409,8 +407,6 @@ export class StateHandlerRoom extends Room<State> {
                 player.hp = 613;
                 player.victoryNum = 0;
             });
-            // this.state.gameState = GameState.WAITING;
-            // this.state.selectButton = 0;
             this.state.gameOver = false;
         })
 

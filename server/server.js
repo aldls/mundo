@@ -70,9 +70,7 @@ module.exports = BattleRecord;
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.NODE_ENV === 'production'
-  ? 'https://mundo-827434543905.asia-northeast3.run.app/auth/google/callback'  // Cloud Run URL
-  : 'http://localhost:8080/auth/google/callback', // Local URL
+  callbackURL: 'http://localhost:3000/auth/google/callback'
 },
 async function(token, tokenSecret, profile, done) {
   try {
@@ -145,7 +143,7 @@ app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
     // If the user has the default nickname, redirect to set-nickname page
-    if (req.user.nickname && req.user.nickname.startsWith('user-')) {
+    if (req.user.nickname.startsWith('user-')) {
       return res.redirect('/set-nickname');
     }
     res.redirect('/loading'); // Otherwise, first move on to the loading page
@@ -207,7 +205,7 @@ app.get('/logout', (req, res) => {
     }
     // Clear the session and redirect to Google's logout URL
     req.session.destroy(() => {
-      res.redirect(`https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=${encodeURIComponent('https://mundo-420250837972.asia-northeast3.run.app')}`);
+      res.redirect(`https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=${encodeURIComponent('http://localhost:3000')}`);
     });
   });
 });
@@ -390,6 +388,6 @@ app.get('/leaderboard', async (req, res) => {
 
 
 // Start the server
-app.listen(8080, () => {
-  console.log('Server is running on http://localhost:8080');
+app.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
 });

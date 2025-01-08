@@ -21,7 +21,7 @@ RUN npm install
 COPY Client/ ./Client/
 
 # Expose necessary ports (e.g., 3000 for the server, 8080 for the client)
-EXPOSE 8080
+EXPOSE 3000
 
 # Run the server using node from the server directory
 CMD ["node", "server.js"]

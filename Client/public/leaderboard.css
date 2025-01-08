@@ -1,20 +1,141 @@
-#leaderboard {
-    list-style-type: none;
-    padding: 0;
+/* General body and page styling */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #0d0f14; /* Dark background color to match LoL's theme */
+    color: white;
+    padding: 20px;
+    margin: 0;
+    text-align: center;
+    background: url('rift.png') no-repeat center center fixed;
+    background-size: cover; /* Make sure the image covers the screen */
+    background-position: center center;
+    background-attachment: fixed;
   }
   
-  #leaderboard li {
+
+  .goBack {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+    
+    /* Apply scale to shrink the button proportionally */
+    transform: scale(0.3);  /* Adjust the scale factor (0.7 is 70% of original size) */
+    
+    /* Position the button at the top-left corner */
+    position: absolute;
+    top: 2%;
+    left: -4%;
+    
+    /* Optional: Add some margin for spacing */
+    margin: 10px;
+}
+
+.button-text {
+    position: absolute;  /* Position the text inside the button */
+    top: 50%;  /* Vertically center text */
+    left: 55%; /* Horizontally center text */
+    transform: translate(-50%, -50%); /* Adjust to precisely center */
+    color: white;  /* Text color */
+    font-size: 5em; /* Font size for the text */
+    font-weight: bold; /* Optional: Make the text bold */
+}
+
+/* Leaderboard image logo */
+.leaderboard-logo {
+    width: 40%;  /* Adjust the width of the image as needed */
+    max-width: 50%;  /* Maximum size limit */
+    margin-bottom: 2%; /* Keep some space below the image */
+    margin-top: 3%;
+}
+
+
+  
+  /* Sorting buttons styling */
+  .sorting-buttons {
+    margin-bottom: 1%;
     display: flex;
-    align-items: center;
-    margin: 10px 0;
-    background: #f9f9f9;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    justify-content: center;
+    gap: 5%;
   }
   
-  #leaderboard li img {
-    border-radius: 50%;
-    margin-right: 15px;
+  .sorting-buttons button {
+    padding: 10px 20px;
+    background-color: #32281E; /* Dark background for contrast */
+    color: #C89B3C; /* Gold text */
+    border: 2px solid #C89B3C; /* Gold border */
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+    border-radius: 0px;
+    font-weight: bold; /* Make the text bold for active button */
   }
+  
+  .sorting-buttons button:hover {
+    background-color: #785A28; /* Highlighted button on hover */
+    color: #0d0f14; /* Dark text color */
+    transform: scale(1.05); /* Slight scale effect */
+  }
+  
+
+  
+  /* Table styling */
+  table {
+    width: 80%;
+    margin: 0 auto;
+    border-collapse: collapse;
+    background-color: rgba(41, 41, 41, 0.4); /* Semi-transparent background */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  }
+
+  table th, table td {
+    padding: 15px;
+    border: 1px solid #444;
+    text-align: center;
+    font-size: 1.1rem;
+  }
+
+  /* Table Header */
+  table th {
+    background-color: rgba(33, 33, 33, 0.9); /* Semi-transparent dark header */
+    color: #C89B3C; /* Golden header */
+    text-transform: uppercase;
+  }
+
+  /* Table Data */
+  table td {
+    background-color: rgba(41, 41, 41, 0.6); /* Semi-transparent dark data cells */
+  }
+
+  table tr:nth-child(even) {
+    background-color: rgba(51, 51, 51, 0.6); /* Slightly different transparent color for even rows */
+  }
+
+  table tr:hover {
+    background-color: rgba(68, 68, 68, 0.6); /* Darker hover effect with transparency */
+  }
+
+  
+  /* Ranking and winrate column styling */
+  td:first-child {
+    font-weight: bold;
+    color: #C8AA6E;
+  }
+  
+  td:last-child {
+    color: #00baff; /* Blueish color for winrate */
+  }
+  
+  /* Add a subtle shadow to the leaderboard */
+  table {
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+  }
+  
+  /* Add some extra polish to the table */
+  table th, table td {
+    border-radius: 5px;
+  }
+  
+  table td {
+    border: 1px solid #444;
+  }
+  
   

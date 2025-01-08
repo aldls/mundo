@@ -1,62 +1,264 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leaderboard</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 20px;
+/* Body styles */
+body {
+    height: 100%;
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+    font-family: Arial, sans-serif;
+    background: url('rift.png') no-repeat center center fixed;
+    background-size: cover; /* Make sure the image covers the screen */
+    background-position: center center;
+    background-attachment: fixed;
+    color: #fff; /* Ensures text is readable */
+    display: flex;
+    flex-direction: column; /* Use a column layout */
+    overflow: hidden; /* Prevent scrolling */
+}
+
+/* Background overlay */
+.background-overlay {
+  position: absolute;
+  top: 10vh;
+  left:10vw;
+  width: 80vw;
+  height: 80vh;
+  background-color: rgba(0, 0, 0, 0.4); /* Semi-transparent black */
+  z-index: -1; /* Sends it all the way to the back */
+}
+
+/* Container styles for the flex layout */
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0px;
+  gap: 0px; /* Adjusted gap for flexibility */
+  width: 100%; /* Ensure full width */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+
+
+/* Left side */
+.left-side {
+  flex: 1; /* Allow the left side to take available space */
+  max-width: 35vw; /* Prevent it from getting too wide */
+  border-radius: 10px;
+  height: 70vh;
+  width: 35vw;
+  align-items: center; /* Center horizontally */
+  margin-top: 15vh;
+  margin-left: 15vw;
+}
+
+.left-side h1 {
+  font-size: 2.5em; /* Scalable font size */
+  text-align: left;
+  margin-left: 5vw;
+  margin-bottom: 15vh;
+}
+
+.left-side .button-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 5vh;
+  margin-left: -5vw
+}
+
+.left-side .button-container button {
+  background: url('msg.png') no-repeat center center;
+  background-size: contain;
+  width: 100%; /* Ensure buttons take full container width */
+  height: auto;
+  border: none;
+  cursor: pointer;
+}
+
+.left-side .play-button {
+  font-size: 2.5em;
+  font-weight: bold;
+  background-color: transparent;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 20px 0; /* Vertical padding */
+  padding-left: 17vw; /* Move the text to the right relative to the button's left margin */
+  text-align: left; /* Ensure text is aligned to the left */
+}
+
+
+.left-side .button-container button:last-child {
+  background: url('ddabong_box.png') no-repeat center center;
+  background-size: contain;
+  width: 100%; /* Ensure buttons take full container width */
+  height: auto;
+  padding: 20px 0; /* Vertical padding */
+  padding-left: 17vw; /* Move the text to the right relative to the button's left margin */
+}
+  
+
+
+
+/* Right side */
+.right-side {
+  position: absolute; /* Allows free positioning */
+  flex: 1; /* Allow the right side to take available space */
+  max-width: 35vw; /* Prevent it from getting too wide */
+  border-radius: 10px;
+  text-align: center;
+  margin-top: 15vh;
+  margin-left: 50vw;
+  height: 70%;
+  width: 50%;
+  /* background-color: red; */
+}
+
+/* General styles for headings */
+.right-side h2 {
+    font-size: 1.8em; /* Adjust size for emphasis */
+    color: white; /* Gold color for consistency */
+    text-align: center; /* Center align for profile display */
+    margin-top: -1vh;
+}
+
+/* Styling the profile photo */
+.right-side .profile-photo {
+    display: block;
+    margin: 10px auto; /* Center align with margin */
+    width: 120px; /* Ensure consistent size */
+    height: 120px; /* Match width for square shape */
+    border-radius: 50%; /* Circular profile photo */
+    border: 3px solid #C89B3C; /* Gold border for emphasis */
+    object-fit: cover; /* Ensure photo fits within the circle */
+}
+
+/* Paragraph styling for level text */
+.right-side p {
+    font-size: 1.2em; /* Slightly larger text */
+    margin: 10px 0; /* Space around the text */
+    color: #fff; /* White text for readability */
+    text-align: center; /* Center align with profile photo */
+}
+
+/* Form styles for buttons */
+.right-side form {
+    display: inline-block; /* Inline for side-by-side layout */
+    margin-top: 20px; /* Space around forms */
+}
+
+/* Logout button specific styles */
+.right-side .logout-button {
+    background-color: #32281E; /* Dark background for contrast */
+    color: #C89B3C; /* Gold text */
+    border: 2px solid #C89B3C; /* Gold border */
+    padding: 10px 20px; /* Spacing inside button */
+    font-size: 1em; /* Standard font size */
+    font-weight: bold; /* Bold text */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth transition for hover effects */
+    
+}
+
+.right-side .logout-button:hover {
+    background-color: #C89B3C; /* Gold background on hover */
+    color: #010A13; /* Dark text on hover */
+    transform: scale(1.05); /* Slight zoom effect */
+}
+
+/* Delete button specific styles */
+.right-side .delete-button {
+    background-color: #32281E; /* Dark background for contrast */
+    color: #C89B3C; /* Red text for warning */
+    border: 2px solid #C89B3C; /* Red border for emphasis */
+    padding: 10px 20px; /* Spacing inside button */
+    font-size: 1em; /* Standard font size */
+    font-weight: bold; /* Bold text */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth transition for hover effects */
+}
+
+.right-side .delete-button:hover {
+    background-color: red; /* Red background on hover */
+    color: #010A13; /* Dark text on hover */
+    transform: scale(1.05); /* Slight zoom effect */
+}
+
+/* Right-side GIF image styling */
+.gif-container {
+  position: absolute; /* Allow free placement */
+  bottom: 3vh;
+  right: 9vw;
+  max-width: 50%;
+  max-height: 200%;
+  object-fit: contain;
+  transform: scaleX(-1) translateY(-10%) translateX(150%);
+  width: 10%;
+  height: auto;
+  /* background-color: yellow; */
+}
+
+
+
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  
+
+  .left-side, .right-side {
+    max-width: 90%; /* Ensure they take up most of the screen width */
+  }
+
+  .left-side h1 {
+    font-size: 2em;
+    margin-left: 0;
+  }
+  
+  .left-side .play-button {
+    font-size: 2em;
+    padding: 15px 0;
+  }
+
+  .left-side .button-container button {
+    width: 100%;
+  }
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    h2 {
+        font-size: 1.5em; /* Smaller font size for smaller screens */
     }
-    h1 {
-      text-align: center;
+    .background-overlay {
+      pointer-events: none;
     }
-    table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      width: 80%;
+    .profile-photo {
+        width: 90px; /* Smaller size for smaller screens */
+        height: 90px;
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+
+    p {
+        font-size: 1em; /* Smaller font size */
     }
-    th {
-      background-color: #4CAF50;
-      color: white;
+
+    form {
+        display: block; /* Stack forms vertically */
+        margin: 10px auto; /* Center align forms */
+        z-index: 1000; /* Higher than other elements */
+
     }
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
+
+    .logout-button, .delete-button {
+        width: 100%; /* Full width for smaller screens */
+        font-size: 0.9em; /* Adjust font size */
     }
-  </style>
-</head>
-<body>
-  <h1>Leaderboard</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>Rank</th>
-        <th>Profile</th>
-        <th>Nickname</th>
-        <th>Wins</th>
-        <th>Losses</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% players.forEach((player, index) => { %>
-        <tr>
-          <td><%= index + 1 %></td> <!-- Rank -->
-          <td>
-            <img src="<%= player.photo %>" alt="Profile Picture" style="width: 40px; height: 40px; border-radius: 50%;">
-          </td> <!-- Profile Picture -->
-          <td><%= player.nickname %></td> <!-- Nickname -->
-          <td><%= player.wins %></td> <!-- Wins -->
-          <td><%= player.losses %></td> <!-- Losses -->
-        </tr>
-      <% }); %>
-    </tbody>
-  </table>
-</body>
-</html>
+
+    .gif-container {
+      max-width: 100%;
+      max-height: 70vh;
+      transform: scaleX(-1);
+      width: 100%;
+      pointer-events: none;
+      z-index: -1;
+  }
+}

@@ -2,10 +2,14 @@ const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
-require('dotenv').config();
 const mongoose = require('mongoose');
 
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET);
+
 const { pbkdf2 } = require('crypto');
 const app = express();
 // Serve static files from the 'Client/public' directory
@@ -66,7 +70,9 @@ module.exports = BattleRecord;
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'http://localhost:3000/auth/google/callback'
+  callbackURL: process.env.NODE_ENV === 'production'
+  ? 'https://mundo-827434543905.asia-northeast3.run.app/auth/google/callback'  // Cloud Run URL
+  : 'http://localhost:8080/auth/google/callback', // Local URL
 },
 async function(token, tokenSecret, profile, done) {
   try {
@@ -139,7 +145,7 @@ app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
     // If the user has the default nickname, redirect to set-nickname page
-    if (req.user.nickname.startsWith('user-')) {
+    if (req.user.nickname && req.user.nickname.startsWith('user-')) {
       return res.redirect('/set-nickname');
     }
     res.redirect('/loading'); // Otherwise, first move on to the loading page
@@ -185,7 +191,7 @@ app.get('/dashboard', async (req, res) => {
   // Now get the nickname from the authenticated user
   const nickname = req.user.nickname;
   // Game URL to redirect the user after login
-  const gameServerUrl = 'http://localhost:2567/07-custom-lobby-room.html'; // Replace with the actual game URL
+  const gameServerUrl = 'https://mundo-420250837972.asia-northeast3.run.app/07-custom-lobby-room.html'; // Replace with the actual game URL
   const gameUrl = `${gameServerUrl}?nickname=${encodeURIComponent(nickname)}`;
   // Render the dashboard EJS template and pass the user data
   res.render('dashboard', { user: req.user, gameUrl });
@@ -201,7 +207,7 @@ app.get('/logout', (req, res) => {
     }
     // Clear the session and redirect to Google's logout URL
     req.session.destroy(() => {
-      res.redirect(`https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=${encodeURIComponent('http://localhost:3000')}`);
+      res.redirect(`https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=${encodeURIComponent('https://mundo-420250837972.asia-northeast3.run.app')}`);
     });
   });
 });
@@ -222,7 +228,7 @@ app.get('/api/user/nickname', (req, res) => {
 
 //----------------------------------------------------------------------------------------------------
 // MongoDB connection
-mongoose.connect('mongodb://localhost:27017/mydb')
+mongoose.connect("mongodb+srv://huitaehanww:hhan@hhan.ytv2q.mongodb.net/mydb?retryWrites=true&w=majority&appName=hhan")
   .then(() => {
     console.log('MongoDB connected');
   })
@@ -230,6 +236,17 @@ mongoose.connect('mongodb://localhost:27017/mydb')
     console.log('MongoDB connection error:', err);
   });
 
+// mongoose.connect('mongodb://host.docker.internal:27017/mydb', {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true
+// });
+
+// mongoose.connect('mongodb://mongodb:27017/mydb', {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true
+// });
+
+  
 
 
 //----------------------------------------------------------------------------------------------------  
@@ -300,49 +317,42 @@ app.post('/delete-account', async (req, res) => {
 //----------------------------------------------------------------------------------------------------
 // Endpoint to receive battle records
 app.post('/battleRecords', async (req, res) => {
-  const battleRecords = req.body;
+  const record = req.body;
+  console.log(req.body);
+  // Validate the structure of each battle record
+  if (!record.player1 || !record.player2  || !record.winner) {
+    return res.status(400).json({ message: 'Missing required fields in battle record' });
+  }
 
-  if (Array.isArray(battleRecords)) {
-    // Validate the structure of each battle record
-    for (const record of battleRecords) {
-      if (!record.player1 || !record.player2  || !record.winner) {
-        return res.status(400).json({ message: 'Missing required fields in battle record' });
-      }
+  try {
+    // Iterate over each battle record and update the player's wins or losses
+    const p1 = await User.findOne({ nickname: record.player1 });
+    const p2 = await User.findOne({ nickname: record.player2})
+
+    if (!p1) {
+      return res.status(404).json({ message: `Player with nickname ${record.player1} not found` });
+    }
+    if (!p2) {
+      return res.status(404).json({ message: `Player with nickname ${record.player2} not found` });
+    }
+    // Update the win or loss count
+    if (record.winner === record.player1 ) {
+      p1.wins += 1;  // Increment wins if the player won
+      p2.losses += 1;  
+    } else {
+      p1.losses += 1;  // Increment losses if the player lost
+      p2.wins += 1;
     }
 
-    try {
-      // Iterate over each battle record and update the player's wins or losses
-      for (const record of battleRecords) {
-        const p1 = await User.findOne({ nickname: record.player1 });
-        const p2 = await User.findOne({ nickname: record.player2})
+    // Save updated player info
+    await p1.save();
+    await p2.save();
+    
 
-        if (!p1) {
-          return res.status(404).json({ message: `Player with nickname ${record.player1} not found` });
-        }
-        if (!p2) {
-          return res.status(404).json({ message: `Player with nickname ${record.player2} not found` });
-        }
-        // Update the win or loss count
-        if (record.winner === record.player1 ) {
-          p1.wins += 1;  // Increment wins if the player won
-          p2.losses += 1;  
-        } else {
-          p1.losses += 1;  // Increment losses if the player lost
-          p2.wins += 1;
-        }
-
-        // Save updated player info
-        await p1.save();
-        await p2.save();
-      }
-
-      res.status(200).json({ message: 'Battle records received and saved successfully' });
-    } catch (error) {
-      console.error('Error saving battle records:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  } else {
-    res.status(400).json({ message: 'Invalid data format. Expected an array of battle records.' });
+    res.status(200).json({ message: 'Battle records received and saved successfully' });
+  } catch (error) {
+    console.error('Error saving battle records:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -380,6 +390,6 @@ app.get('/leaderboard', async (req, res) => {
 
 
 // Start the server
-app.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
+app.listen(8080, () => {
+  console.log('Server is running on http://localhost:8080');
 });
